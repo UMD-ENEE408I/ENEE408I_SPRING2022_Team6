@@ -94,17 +94,25 @@ void turnRight(int pwm) {
 
 /*PID Control*/
 long prevTime = 0;
-int prevPos = 0;
+int prevPos_L = 0;
+int prevPos_R = 0;
 
-float targetVel = 30;  //in cm/s
-float targetPos = 0;
+float targetVel = 15;  //in cm/s
 int targetDist = 50; //desired distance in cm
-float finalPos = 0; //desired endpoint in encoder ticks
+float targetPos_L = 0;
+float targetPos_R = 0;
+float finalPos_L = 0; //desired endpoint in encoder ticks
+float finalPos_R = 0; //desired endpoint in encoder ticks
 
-float currentError = 0;
-float integral = 0;
-float derivative = 0;
-float prevError = 0;
+float currentError_L = 0;
+float integral_L = 0;
+float derivative_L = 0;
+float prevError_L = 0;
+
+float currentError_R = 0;
+float integral_R = 0;
+float derivative_R = 0;
+float prevError_R = 0;
 
 boolean initialStop = true;
 
@@ -136,9 +144,11 @@ void setup() {
   pinMode(M_RIGHT_I_SENSE, INPUT);
   
   delay(3000);
-  prevPos = 0;  //get start position
+  prevPos_L = 0;  //get start position
+  prevPos_R = 0;  //get start position
   prevTime = micros();  //get start time in us
-  finalPos = targetDist/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos; //convert desired distance to encoder value
+  finalPos_L = targetDist/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L; //convert desired distance to encoder value
+  finalPos_R = targetDist/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R; //convert desired distance to encoder value
 }
 
 void loop() {
@@ -146,64 +156,86 @@ void loop() {
   Encoder encL(M1_ENC_A, M1_ENC_B); //left wheel, forward pos
   Encoder encR(M2_ENC_A, M2_ENC_B); //right wheel, forward neg
 
-  encR.write(0);
+  encL.write(0); encR.write(0);
   delay(10);
    
   while(endFlag != 1) {  //"actual main loop"
     long currentTime = micros(); //time in us
-    int currentPos = -encR.read(); //actually left
+    int currentPos_L = encL.read(); //actually right
+    int currentPos_R = -encR.read(); // actually left
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
-    float currentVel = ((float)(currentPos - prevPos)/ROTATION)/deltaTime; //rev per sec
-    float metricVel = currentVel*2*PI*WHEEL_RADIUS/10; //in cm/s
-    if(metricVel != 0) { //don't change setpoint until we start moving 
+    float currentVel_L = ((float)(currentPos_L - prevPos_L)/ROTATION)/deltaTime; //rev per sec
+    float metricVel_L = currentVel_L*2*PI*WHEEL_RADIUS/10; //in cm/s
+    float currentVel_R = ((float)(currentPos_R - prevPos_R)/ROTATION)/deltaTime; //rev per sec
+    float metricVel_R = currentVel_R*2*PI*WHEEL_RADIUS/10; //in cm/s
+    if(metricVel_R != 0 || metricVel_L != 0) { //don't change setpoint until we start moving 
       initialStop = false;
     }
-    //Serial.print(metricVel); Serial.print(','); for tuning PID
-    //Serial.print(targetVel); Serial.println();
-
     //calculate desired position (ticks)
     float deltaPos = (targetVel*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
     if(initialStop) { //if starting from rest, don't change target
-      targetPos = currentPos + deltaPos; 
+      targetPos_L = currentPos_L + deltaPos;
+      targetPos_R = currentPos_R + deltaPos;
     }
     else { //otherwise continue as normal
-      targetPos = targetPos + deltaPos;
+      targetPos_L = targetPos_L + deltaPos;
+      targetPos_R = targetPos_R + deltaPos;
     }
     //calculate control values
-    currentError = targetPos - currentPos;
-    integral = integral + currentError*deltaTime;
-    derivative = (currentError - prevError)/deltaTime;
+    currentError_L = targetPos_L - currentPos_L;
+    integral_L = integral_L + currentError_L*deltaTime;
+    derivative_L = (currentError_L - prevError_L)/deltaTime;
   
-    float u = Kp*currentError + Ki*integral + Kd*derivative;
+    currentError_R = targetPos_R - currentPos_R;
+    integral_R = integral_R + currentError_R*deltaTime;
+    derivative_R = (currentError_R - prevError_R)/deltaTime;
+
+    float u_L = Kp*currentError_L + Ki*integral_L + Kd*derivative_L;
+    float u_R = Kp*currentError_R + Ki*integral_R + Kd*derivative_R;
   
-    Serial.print("Current Position: "); Serial.print(currentPos); Serial.println();
+    Serial.print("Current Position: "); Serial.print(currentPos_R); Serial.println();
     Serial.print("Delta Position: "); Serial.print(deltaPos); Serial.println();
-    Serial.print("Target Position: "); Serial.print(targetPos); Serial.println();
-    Serial.print("Error: "); Serial.print(currentError); Serial.println();
-    Serial.print("Velocity: "); Serial.print(currentVel); Serial.println();
+    Serial.print("Target Position: "); Serial.print(targetPos_R); Serial.println();
+    Serial.print("Error: "); Serial.print(currentError_R); Serial.println();
+    Serial.print("Velocity: "); Serial.print(currentVel_R); Serial.println();
   
     //update variables
-    prevPos = currentPos;
     prevTime = currentTime;
-    prevError = currentError;
+    prevPos_L = currentPos_L;
+    prevPos_R = currentPos_R;
+    prevError_L = currentError_L;
+    prevError_R = currentError_R;
 
     //set motor power
-    if (u > MAX_PWM_VALUE) { //if too large, cap
-      u = MAX_PWM_VALUE;
+    if (u_L > MAX_PWM_VALUE) { //if too large, cap
+      u_L = MAX_PWM_VALUE;
     }
-    else if (u < MIN_PWM_VALUE && u > 0) {  //if too small
-      u = BASE_PWM;
+    else if (u_L < MIN_PWM_VALUE && u_L > 0) {  //if negative or too small, stop
+      u_L = BASE_PWM;
     }
-    else if (u <= 0) {
-      u = 0;
+    else if (u_L <= 0) {
+      u_L = 0;
     }
 
-    Serial.print("Control: "); Serial.print(u); Serial.println();
+   //set motor power
+    if (u_R > MAX_PWM_VALUE) { //if too large, cap
+      u_R = MAX_PWM_VALUE;
+    }
+    else if (u_R < MIN_PWM_VALUE && u_R > 0) {  //if negative or too small, stop
+      u_R = BASE_PWM;
+    }
+    else if (u_R <= 0) {
+      u_R = 0;
+    }
+
+    Serial.print("Control: "); Serial.print(u_R); Serial.println();
     Serial.println(); Serial.println();
-    M_RIGHT_forward(u);  //actually left, switched for one mouse
+    M_LEFT_forward(u_L);  //actually switched for one mouse
+    M_RIGHT_forward(u_R);  //actually right, switched for one mouse
     delay(10);
-    currentPos = -encR.read(); //actually left
-    if (currentPos >= finalPos) {
+    currentPos_L = encL.read(); //actually right
+    currentPos_R = -encR.read(); //actually right
+    if (currentPos_L >= finalPos_L || currentPos_R >= finalPos_R) {
       stopMove();
       endFlag = 1;
     }
