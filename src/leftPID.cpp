@@ -96,9 +96,9 @@ void turnRight(int pwm) {
 long prevTime = 0;
 int prevPos = 0;
 
-float targetVel = 15;  //in cm/s
+float targetVel = 30;  //in cm/s
 float targetPos = 0;
-int targetDist = 100; //desired distance in cm
+int targetDist = 50; //desired distance in cm
 float finalPos = 0; //desired endpoint in encoder ticks
 
 float currentError = 0;
@@ -111,9 +111,9 @@ boolean initialStop = true;
 int endFlag = 0;
 
 //PID constants
-float Kp = 3;
-float Ki = 0.5;
-float Kd = 0.1;
+float Kp = 0.3;
+float Ki = 0.08;
+float Kd = 0.06;
 
 void setup() {
   pinMode(14, OUTPUT);
@@ -158,6 +158,9 @@ void loop() {
     if(metricVel != 0) { //don't change setpoint until we start moving 
       initialStop = false;
     }
+    //Serial.print(metricVel); Serial.print(','); for tuning PID
+    //Serial.print(targetVel); Serial.println();
+
     //calculate desired position (ticks)
     float deltaPos = (targetVel*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
     if(initialStop) { //if starting from rest, don't change target
@@ -188,7 +191,7 @@ void loop() {
     if (u > MAX_PWM_VALUE) { //if too large, cap
       u = MAX_PWM_VALUE;
     }
-    else if (u < MIN_PWM_VALUE && u > 0) {  //if negative or too small, stop
+    else if (u < MIN_PWM_VALUE && u > 0) {  //if too small
       u = BASE_PWM;
     }
     else if (u <= 0) {
