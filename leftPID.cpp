@@ -96,9 +96,9 @@ void turnRight(int pwm) {
 long prevTime = 0;
 int prevPos = 0;
 
-float targetVel = 30;  //in cm/s
+float targetVel = 10;  //in cm/s
 float targetPos = 0;
-int targetDist = 50; //desired distance in cm
+int targetDist = 1000; //desired distance in cm
 float finalPos = 0; //desired endpoint in encoder ticks
 
 float currentError = 0;
@@ -111,9 +111,9 @@ boolean initialStop = true;
 int endFlag = 0;
 
 //PID constants
-float Kp = 0.3;
-float Ki = 0.08;
-float Kd = 0.06;
+float Kp = 0.2;
+float Ki = 0.1;
+float Kd = 0.1;
 
 void setup() {
   pinMode(14, OUTPUT);
@@ -151,14 +151,14 @@ void loop() {
    
   while(endFlag != 1) {  //"actual main loop"
     long currentTime = micros(); //time in us
-    int currentPos = -encR.read(); //actually left
+    int currentPos = encR.read(); //actually left
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
     float currentVel = ((float)(currentPos - prevPos)/ROTATION)/deltaTime; //rev per sec
     float metricVel = currentVel*2*PI*WHEEL_RADIUS/10; //in cm/s
     if(metricVel != 0) { //don't change setpoint until we start moving 
       initialStop = false;
     }
-    //Serial.print(metricVel); Serial.print(','); for tuning PID
+    //Serial.print(metricVel); Serial.print(','); //for tuning PID
     //Serial.print(targetVel); Serial.println();
 
     //calculate desired position (ticks)
@@ -202,10 +202,10 @@ void loop() {
     Serial.println(); Serial.println();
     M_RIGHT_forward(u);  //actually left, switched for one mouse
     delay(10);
-    currentPos = -encR.read(); //actually left
-    if (currentPos >= finalPos) {
+    currentPos = encR.read(); //actually left
+    /*if (currentPos >= finalPos) {
       stopMove();
       endFlag = 1;
-    }
+    }*/
   }
 }
