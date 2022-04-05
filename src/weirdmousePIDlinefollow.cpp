@@ -195,19 +195,13 @@ void loop() {
     Serial.print(metricVel_R); Serial.print(',');
     Serial.print(targetVel); Serial.println();*/
 
-    if(metricVel_R != 0 || metricVel_L != 0) { //don't change setpoint until we start moving 
-      initialStop = false;
-    }
     //calculate desired position (ticks)
     float deltaPos = (targetVel*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
-    /*if(initialStop) { //if starting from rest, don't change target
-      targetPos_L = currentPos_L + deltaPos;
-      targetPos_R = currentPos_R + deltaPos;
-    }*/
-    //else { //otherwise continue as normal
-      targetPos_L = targetPos_L + deltaPos;
-      targetPos_R = targetPos_R + deltaPos;
-    //}
+
+    //increment target position
+    targetPos_L = targetPos_L + deltaPos;
+    targetPos_R = targetPos_R + deltaPos;
+
     //calculate control values
     currentError_L = targetPos_L - currentPos_L;
     integral_L = integral_L + currentError_L*deltaTime;
