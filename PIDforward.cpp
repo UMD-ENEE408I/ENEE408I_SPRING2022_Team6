@@ -136,7 +136,8 @@ void setup() {
 
 void loop() {
   PIDForward(20);
-  delay(10);
+  stopMove();
+  delay(1000);
 }
 
 void PIDForward(int distance) {
