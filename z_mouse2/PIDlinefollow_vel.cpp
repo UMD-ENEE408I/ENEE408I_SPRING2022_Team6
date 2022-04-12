@@ -259,17 +259,17 @@ void loop() {
     //read reflectance sensors to stay on line
     senseLine(bit_buf);
     //TODO: make this proportional control
-    if(bit_buf[6] || bit_buf[7] || bit_buf[8]) {
+    if(bit_buf[6] || bit_buf[7] || bit_buf[8]) { //we are on the line, reset velocity to default
       targetVel_L = 10;
       targetVel_R = 10;
     }
     else if(bit_buf[9] == 1 || bit_buf[10] == 1 || bit_buf[11] == 1) { //too far right, veer left
-      targetVel_R += 0.05;
-      targetVel_L -= 0.05;
+      targetVel_R += 0.03;
+      targetVel_L -= 0.03;
     }
     else if(bit_buf[5] == 1 || bit_buf[4] == 1 || bit_buf[3] == 1) { //too far left, veer right
-      targetVel_R -= 0.05;
-      targetVel_L += 0.05;
+      targetVel_R -= 0.03;
+      targetVel_L += 0.03;
     }
     else if(emptyCheck == 13) { //no sensors active, off line, stop
       stopMove();
