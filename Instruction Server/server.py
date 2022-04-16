@@ -599,7 +599,7 @@ class Maze:
 
         url = f"{url}&i={self.instruction}"
 
-        with open(r'display/data/data.txt', 'w') as file:
+        with open(r'./Maze Display/data/data.txt', 'w') as file:
             file.write(url)
             file.close()
 
