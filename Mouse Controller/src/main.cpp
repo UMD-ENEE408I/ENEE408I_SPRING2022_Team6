@@ -61,7 +61,6 @@ int leftSide = 0;
 int rightSide = 0;
 int emptyCheck = 0;
 
-float zOffset = 0.0;
 sensors_event_t a, g, temp;
 
 WiFiServer server(80);
@@ -108,31 +107,34 @@ void stopMove() {
 
 /* BEGIN Rotational Movement *************************************/
 
-void calibrateMouse() {
+float calibrateMouse() {
   delay(500);
+  float zOffset = 0.0;
 
   for (int i = 0; i < NUM_CALIBRATION_SAMPLES; i++) {
     mpu.getEvent(&a, &g, &temp);
     zOffset = zOffset + (g.gyro.z / NUM_CALIBRATION_SAMPLES);
     delay(5);
   }
+
+  return zOffset;
 }
 
 void rotateLeft(int deg) {
   float zPosition = 0.0;
   float timeElapsed = 0.0;
   float zVel = 0.0;
-  unsigned long prevTime = millis();
-  
-  calibrateMouse();
+  float zOffset = calibrateMouse();
 
-  M_LEFT_backward(MIN_PWM_VALUE);
-  M_RIGHT_forward(MIN_PWM_VALUE);
+  unsigned long prevTime = millis();
+
+  M_LEFT_backward(100);
+  M_RIGHT_forward(100);
 
   while (zPosition < deg*DEG_TO_RAD) {
     mpu.getEvent(&a, &g, &temp);
-    zVel = (g.gyro.z - zOffset);
-    timeElapsed = (millis() - prevTime);
+    zVel = g.gyro.z - zOffset;
+    timeElapsed = millis() - prevTime;
     zPosition = zPosition + (zVel * timeElapsed / 1000);
     prevTime = millis();
   }
@@ -144,12 +146,12 @@ void rotateRight(int deg) {
   float zPosition = 0.0;
   float timeElapsed = 0.0;
   float zVel = 0.0;
-  unsigned long prevTime = millis();
-  
-  calibrateMouse();
+  float zOffset = calibrateMouse();
 
-  M_LEFT_forward(MIN_PWM_VALUE);
-  M_RIGHT_backward(MIN_PWM_VALUE);
+  unsigned long prevTime = millis();
+
+  M_LEFT_forward(100);
+  M_RIGHT_backward(100);
 
   while (zPosition > -deg*DEG_TO_RAD) {
     mpu.getEvent(&a, &g, &temp);
@@ -367,12 +369,18 @@ void pingJetson(String serverName){
 /* SETUP *************************************/
 
 void setup() {
+  // Sound
   pinMode(14, OUTPUT);
   digitalWrite(14, LOW);
   delay(100);
   
+  // Serial
   Serial.begin(115200);
+
+  while (!Serial)
+    delay(10); // will pause Zero, Leonardo, etc until serial console opens
   
+  // Motor
   ledcSetup(M_RIGHT_IN_1_CHANNEL, freq, resolution);
   ledcSetup(M_RIGHT_IN_2_CHANNEL, freq, resolution);
   ledcSetup(M_LEFT_IN_1_CHANNEL, freq, resolution);
@@ -386,9 +394,37 @@ void setup() {
   pinMode(M_RIGHT_I_SENSE, INPUT);
   pinMode(M_LEFT_I_SENSE, INPUT);
 
+  // ADC
   adc1.begin(ADC_1_CS);  
   adc2.begin(ADC_2_CS);
 
+  // MPU
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
+  }
+  Serial.println("MPU6050 Found!");
+
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  Serial.print("Gyro range set to: ");
+  switch (mpu.getGyroRange()) {
+  case MPU6050_RANGE_250_DEG:
+    Serial.println("+- 250 deg/s");
+    break;
+  case MPU6050_RANGE_500_DEG:
+    Serial.println("+- 500 deg/s");
+    break;
+  case MPU6050_RANGE_1000_DEG:
+    Serial.println("+- 1000 deg/s");
+    break;
+  case MPU6050_RANGE_2000_DEG:
+    Serial.println("+- 2000 deg/s");
+    break;
+  }
+
+  // WiFi
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
