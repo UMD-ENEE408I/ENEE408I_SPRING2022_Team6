@@ -518,6 +518,9 @@ class Maze:
         self.camera_ip_addr = camera_ip_addr
         self.is_complete = False
         self.instruction = ''
+        self.prev_x = 0
+        self.prev_y = 0
+        self.prev_facing = 'n'
 
 
     # Breadth-first search from one node to another
@@ -597,7 +600,7 @@ class Maze:
         for n in self.nodes:
             url = f"{url}&{self.nodes[n].getDisplay()}"
 
-        url = f"{url}&i={self.instruction}"
+        url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{self.instruction}"
 
         with open(r'./Maze Display/data/data.txt', 'w') as file:
             file.write(url)
@@ -627,6 +630,11 @@ class Maze:
 
         # Update the display
         self.sendDisplayData()
+
+        # Store previous mouse location
+        self.prev_x = self.mouse.x
+        self.prev_y = self.mouse.y
+        self.prev_facing = self.mouse.facing
 
         # Reset the instruction
         self.instruction = ''
@@ -673,7 +681,9 @@ class Maze:
                     
                 elif self.mouse.vip == vip and not self.end is None:
                     self.mouse.state = 'Traveling to end'
-                    return self.sendInstruction(f"Y{self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, self.end['x'], self.end['y'])}")
+                    instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, self.end['x'], self.end['y'])
+                    self.mouse.setLocation(self.end['x'], self.end['y'], facing)
+                    return self.sendInstruction(f"Y{instruction}")
                 
                 else:
                     self.instruction = f"N"
