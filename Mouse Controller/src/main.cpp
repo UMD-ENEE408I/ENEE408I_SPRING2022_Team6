@@ -13,8 +13,8 @@
 #define NUM_CALIBRATION_SAMPLES 100
 
 #define CENTER_ON_NODE_DISTANCE 12 //cm
-#define STRAIGHT_NODE_DISTANCE 15 - CENTER_ON_NODE_DISTANCE //cm
-#define CURVE_NODE_DISTANCE 15*TWO_PI/4 - CENTER_ON_NODE_DISTANCE //cm
+#define STRAIGHT_DISTANCE 15 - CENTER_ON_NODE_DISTANCE //cm
+#define CURVE_DISTANCE 15*TWO_PI/4 - CENTER_ON_NODE_DISTANCE //cm
 
 
 
@@ -22,6 +22,10 @@
 Adafruit_MPU6050 mpu;
 Adafruit_MCP3008 adc1;
 Adafruit_MCP3008 adc2;
+
+const unsigned int BUZZ = 26;
+const unsigned int BUZZ_CHANNEL = 0;
+const unsigned int octave = 4;
 
 const unsigned int ADC_1_CS = 2;
 const unsigned int ADC_2_CS = 17;
@@ -337,10 +341,26 @@ void instructionHandler(char instruction){
     case 'L': rotateLeft(90); break;
     case 'R': rotateRight(90); break;
     case 'B': rotateRight(180); break;
-    case 'F': PIDForward(STRAIGHT_NODE_DISTANCE); break;
-    case 'C': PIDForward(CURVE_NODE_DISTANCE); break;
-    case 'Y': delay(5000); break; // TODO: "Yes" sound
-    case 'N': delay(5000); break; // TODO: "No" sound
+    case 'F': PIDForward(STRAIGHT_DISTANCE); break;
+    case 'C': PIDForward(CURVE_DISTANCE); break;
+    case 'Y': 
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(150);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave + 1);
+      delay(150);
+      ledcWrite(BUZZ_CHANNEL, 0);
+      delay(5000);
+      break;
+    case 'N':
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_A, octave);
+      delay(100);
+      ledcWrite(BUZZ_CHANNEL, 0);
+      delay(50);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_A, octave);
+      delay(100);
+      ledcWrite(BUZZ_CHANNEL, 0);
+      delay(5000);
+      break;
     case 'S': delay(5000); break; // TODO: "Success" sound
   }
 }
@@ -373,6 +393,7 @@ void setup() {
   pinMode(14, OUTPUT);
   digitalWrite(14, LOW);
   delay(100);
+  ledcAttachPin(BUZZ, BUZZ_CHANNEL);
   
   // Serial
   Serial.begin(115200);
