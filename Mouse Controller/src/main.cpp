@@ -12,9 +12,9 @@
 
 #define NUM_CALIBRATION_SAMPLES 100
 
-#define NODE_READ_DISTANCE 0 //cm
-#define STRAIGHT_NODE_DISTANCE 15 //cm
-#define CURVE_NODE_DISTANCE 15*TWO_PI/4 //cm
+#define CENTER_ON_NODE_DISTANCE 12 //cm
+#define STRAIGHT_NODE_DISTANCE 15 - CENTER_ON_NODE_DISTANCE //cm
+#define CURVE_NODE_DISTANCE 15*TWO_PI/4 - CENTER_ON_NODE_DISTANCE //cm
 
 
 
@@ -482,10 +482,22 @@ void loop() {
         
         if (currentLine.endsWith("/instruct")) {
           String instructions = currentLine.substring(currentLine.indexOf("GET /") + 5, currentLine.indexOf("/instruct"));
-          PIDForward(NODE_READ_DISTANCE);
+
+          PIDForward(CENTER_ON_NODE_DISTANCE); // move up to the node
+
+          // left final instruction out of the loop (final forward/curve instructions are handled differently)
           for (byte i = 0; i < sizeof(instructions); i = i + 1) {
-            instructionHandler(instructions[i]);
+            char instruction = instructions[i];
+            instructionHandler(instruction);
+
+            // for forward/curve instructions, move up to the node to finish the instruction
+            if (instruction == 'F' || instruction == 'C') { 
+              PIDForward(CENTER_ON_NODE_DISTANCE);
+            }
           }
+          
+          // the last instruction in the set doesn't move the mouse up to the node yet
+          instructionHandler(instructions[sizeof(instructions) - 1]);
 
           // Send GET request to instruction server
           pingJetson("http://" + client.remoteIP().toString() + ":8000/next");
