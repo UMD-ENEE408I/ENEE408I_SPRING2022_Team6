@@ -73,12 +73,17 @@ void setup() {
 
 void loop() {  
   senseLine(bit_buf);
+
   //print values
-  for (int i = 1; i < 14; i++) {
-    Serial.print(bit_buf[i]); Serial.print("\t");
+  int sum = 0;
+  for(int i = 1; i < 14; i++) { //tally up all reflectance sensors
+    if(bit_buf[i] == 1) {
+      sum = sum + i;  //if that sensor is on, add its index
+    }
   }
-  Serial.println();
-  delay(100);
+  float line_pos = sum/13; //average position on the line
+  Serial.print(line_pos); Serial.println();
+  delay(10);
 }
 
 void senseLine(int *bit_buf) {

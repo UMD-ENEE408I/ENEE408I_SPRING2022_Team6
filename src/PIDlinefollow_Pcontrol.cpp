@@ -131,18 +131,18 @@ float integral_R = 0;
 float derivative_R = 0;
 float prevError_R = 0;
 
-int kP_line = 0.01;
+float kP_line = 0.03;
 int line_error = 0;
 int endFlag = 0;
 
 //PID constants
-float Kp_R = 0.96;
+float Kp_R = 1.56;
 float Ki_R = 1;
 float Kd_R = 0.25;
 
 float Kp_L = 1.62;
-float Ki_L = 1;
-float Kd_L = 0.25;
+float Ki_L = 1.2;
+float Kd_L = 0.2083;
 
 void setup() {
   pinMode(14, OUTPUT);
@@ -212,6 +212,7 @@ void loop() {
     currentError_R = targetPos_R - currentPos_R;
     integral_R = integral_R + currentError_R*deltaTime;
     derivative_R = (currentError_R - prevError_R)/deltaTime;
+    //derivative_R = -(currentPos_R-prevPos_R)/deltaTime;
 
     float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
     float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
@@ -258,36 +259,47 @@ void loop() {
 
     //read reflectance sensors to stay on line
     senseLine(bit_buf);
+    /*for (int i = 1; i < 14; i++) {
+      Serial.print(bit_buf[i]); Serial.print("\t");
+    }
+    Serial.println();*/
 
     //proportional control for line following correction
     int sum = 0;
-    for(int i = 1; i++; i < 14) { //tally up all reflectance sensors
+    int tally = 0;  //number of sensors active
+    for(int i = 1; i < 14; i++) { //tally up all reflectance sensors
       if(bit_buf[i] == 1) {
         sum = sum + i;  //if that sensor is on, add its index
+        tally++;
       }
     }
-    int line_pos = sum/13; //average position on the line
+    float line_pos = (float)sum/tally; //average position on the line
+    Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
     int target_line = 7; //desired average is the center
     line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
-    int adjust_vel = kP_line * line_error;
-
-    targetVel_L += adjust_vel;  //adjust is pos --> left needs to be pos.
-    targetVel_R -= adjust_vel;  //adjust is neg --> right needs to be pos. (double neg)
-
+    Serial.print("Error: "); Serial.print(line_error); Serial.println();
+    float adjust_vel = kP_line * line_error;
+    Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
+    if(line_error == 0) {  //on track, reset
+      targetVel_L = 10;
+      targetVel_R = 10;
+    }
+    else {
+      targetVel_L += adjust_vel;  //adjust is pos --> left needs to be pos.
+      targetVel_R -= adjust_vel;  //adjust is neg --> right needs to be pos. (double neg)
+    }
     if(emptyCheck == 13) { //no sensors active, off line, stop
       stopMove();
       endFlag = 1;
     }
-    leftSide = 0;
-    rightSide = 0;
     emptyCheck = 0;
-    
     /*currentPos_L = encL.read(); 
     currentPos_R = -encR.read(); 
     if (currentPos_R >= finalPos_R || currentPos_L >= finalPos_L) {
       stopMove();
       endFlag = 1;
     }*/
+    delay(10);
   }
 }
 
