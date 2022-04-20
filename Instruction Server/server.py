@@ -3,7 +3,8 @@ import socketserver
 import requests
 
 
-
+# Mouse 2: 192.168.43.54
+# Mouse 3: 192.168.43.46
 
 # Globals
 
@@ -614,8 +615,7 @@ class Maze:
     def sendInstruction(self, instruction):
         self.instruction = self.instruction + instruction
         print(f"http://{self.mouse.ip}/{self.instruction}/instruct")
-        return self.instruction
-        # return requests.get(f"http://{self.mouse.ip}/{self.instruction}/instruct")
+        return requests.get(f"http://{self.mouse.ip}/{self.instruction}/instruct")
     
 
     # Get available paths, VIP name if present, and whether or not the current node is the end of the maze from the camera via GET request to the camera server's IP address for current mouse to get 

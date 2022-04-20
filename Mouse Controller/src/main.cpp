@@ -12,7 +12,7 @@
 
 #define NUM_CALIBRATION_SAMPLES 100
 
-#define CENTER_ON_NODE_DISTANCE 12 //cm
+#define CENTER_ON_NODE_DISTANCE 9 //cm
 #define STRAIGHT_DISTANCE 15 - CENTER_ON_NODE_DISTANCE //cm
 #define CURVE_DISTANCE 15*TWO_PI/4 - CENTER_ON_NODE_DISTANCE //cm
 
@@ -57,13 +57,14 @@ const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
 
-const char* ssid = "Verizon VS835 7625";
-const char* password =  "Z]8fY@8Z";
+const char* ssid = "DerienHotspot";
+const char* password =  "ENEE408I";
 
 int bit_buf[14]; //Reflectance Sensor Array
-int leftSide = 0;
-int rightSide = 0;
 int emptyCheck = 0;
+
+float kP_line = 0.03;
+int line_error = 0;
 
 sensors_event_t a, g, temp;
 
@@ -188,12 +189,6 @@ void senseLine(int *bit_buf) {
   for (int i = 1; i < 14; i++) {
     if(adc_buf[i] < THRESHOLD) { //below threshold, white line
       bit_buf[i] = 1;
-      if(i > 6) { //left 
-        leftSide++;
-      }
-      if(i < 6) {
-        rightSide++;
-      }
     }
     else {
       bit_buf[i] = 0;
@@ -202,7 +197,7 @@ void senseLine(int *bit_buf) {
   }
 }
 
-void PIDForward(int distance) {
+void PIDForward(int distance, Encoder &encL, Encoder &encR) {
   /*PID Control*/
   float targetVel_L = 10;  //in cm/s
   float targetVel_R = 10;  //in cm/s
@@ -222,16 +217,14 @@ void PIDForward(int distance) {
   float prevError_R = 0;
 
   //PID constants
-  float Kp_R = 0.96;
+  float Kp_R = 1.56;
   float Ki_R = 1;
   float Kd_R = 0.25;
 
   float Kp_L = 1.62;
-  float Ki_L = 1;
-  float Kd_L = 0.25;
+  float Ki_L = 1.2;
+  float Kd_L = 0.2083;
 
-  Encoder encR(M_RIGHT_ENC_A, M_RIGHT_ENC_B); //right wheel, forward neg
-  Encoder encL(M_LEFT_ENC_A, M_LEFT_ENC_B); //left wheel, forward pos
   int prevPos_L = 0;  //get start position
   int prevPos_R = 0;  //get start position
   long prevTime = micros();  //get start time in us
@@ -301,22 +294,32 @@ void PIDForward(int distance) {
 
     //read reflectance sensors to stay on line
     senseLine(bit_buf);
-    //TODO: make this proportional control
-    if(bit_buf[6] || bit_buf[7] || bit_buf[8]) { //we are on the line, reset velocity to default
+    //proportional control for line following correction
+    int sum = 0;
+    int tally = 0;  //number of sensors active
+    for(int i = 1; i < 14; i++) { //tally up all reflectance sensors
+      if(bit_buf[i] == 1) {
+        sum = sum + i;  //if that sensor is on, add its index
+        tally++;
+      }
+    }
+    float line_pos = (float)sum/tally; //average position on the line
+    Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
+    int target_line = 7; //desired average is the center
+    line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
+    Serial.print("Error: "); Serial.print(line_error); Serial.println();
+    float adjust_vel = kP_line * line_error;
+    Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
+    if(line_error == 0) {  //on track, reset
       targetVel_L = 10;
       targetVel_R = 10;
     }
-    else if(bit_buf[9] == 1 || bit_buf[10] == 1 || bit_buf[11] == 1) { //too far right, veer left
-      targetVel_R += 0.03;
-      targetVel_L -= 0.03;
+    else {
+      targetVel_L += adjust_vel;  //adjust is pos --> left needs to be pos.
+      targetVel_R -= adjust_vel;  //adjust is neg --> right needs to be pos. (double neg)
     }
-    else if(bit_buf[5] == 1 || bit_buf[4] == 1 || bit_buf[3] == 1) { //too far left, veer right
-      targetVel_R -= 0.03;
-      targetVel_L += 0.03;
-    }
-    else if(emptyCheck == 13) { //no sensors active, off line, stop
+    if(emptyCheck == 13) { //no sensors active, off line, stop
       stopMove();
-      return;
     }
     emptyCheck = 0;
     
@@ -326,6 +329,112 @@ void PIDForward(int distance) {
       stopMove();
       return;
     }
+    delay(10);
+  }
+}
+
+void PIDForwardNoLine(int distance, Encoder &encL, Encoder &encR) {
+  /*PID Control*/
+  float targetVel_L = 10;  //in cm/s
+  float targetVel_R = 10;  //in cm/s
+  float targetPos_L = 0;
+  float targetPos_R = 0;
+  float finalPos_L = 0; //desired endpoint in encoder ticks
+  float finalPos_R = 0; //desired endpoint in encoder ticks
+
+  float currentError_L = 0;
+  float integral_L = 0;
+  float derivative_L = 0;
+  float prevError_L = 0;
+
+  float currentError_R = 0;
+  float integral_R = 0;
+  float derivative_R = 0;
+  float prevError_R = 0;
+
+  //PID constants
+  float Kp_R = 0.96;
+  float Ki_R = 1;
+  float Kd_R = 0.25;
+
+  float Kp_L = 1.62;
+  float Ki_L = 1;
+  float Kd_L = 0.25;
+
+  int prevPos_L = 0;  //get start position
+  int prevPos_R = 0;  //get start position
+  long prevTime = micros();  //get start time in us
+  finalPos_L = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L; //convert desired distance to encoder value
+  finalPos_R = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R; //convert desired distance to encoder value
+  encL.write(0); encR.write(0); //clear encoders
+  delay(10);
+
+  while (1) {
+    long currentTime = micros(); //time in us
+    int currentPos_L = encL.read(); //actually right
+    int currentPos_R = -encR.read(); // actually left
+    float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
+    //float currentVel_L = ((float)(currentPos_L - prevPos_L)/ROTATION)/deltaTime; //rev per sec
+    //float metricVel_L = currentVel_L*2*PI*WHEEL_RADIUS/10; //in cm/s
+    //float currentVel_R = ((float)(currentPos_R - prevPos_R)/ROTATION)/deltaTime; //rev per sec
+    //float metricVel_R = currentVel_R*2*PI*WHEEL_RADIUS/10; //in cm/s
+
+    //calculate desired position (ticks)
+    float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+    float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+
+    //increment target position
+    targetPos_L = targetPos_L + deltaPos_L;
+    targetPos_R = targetPos_R + deltaPos_R;
+
+    //calculate control values
+    currentError_L = targetPos_L - currentPos_L;
+    integral_L = integral_L + currentError_L*deltaTime;
+    derivative_L = (currentError_L - prevError_L)/deltaTime;
+
+    currentError_R = targetPos_R - currentPos_R;
+    integral_R = integral_R + currentError_R*deltaTime;
+    derivative_R = (currentError_R - prevError_R)/deltaTime;
+
+    float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
+    float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
+
+    //update variables
+    prevTime = currentTime;
+    prevPos_L = currentPos_L;
+    prevPos_R = currentPos_R;
+    prevError_L = currentError_L;
+    prevError_R = currentError_R;
+    
+    //set motor power
+    if (u_L > MAX_PWM_VALUE) { //if too large, cap
+      u_L = MAX_PWM_VALUE;
+    }
+    else if (u_L <= 0) {
+      u_L = 0;
+    }
+
+    //set motor power
+    if (u_R > MAX_PWM_VALUE) { //if too large, cap
+      u_R = MAX_PWM_VALUE;
+    }
+    else if (u_R <= 0) {
+      u_R = 0;
+    }
+    /*Serial.print("Control: "); Serial.print(u_R); Serial.println();
+    Serial.println(); Serial.println();*/
+
+    //drive motors
+    M_RIGHT_forward(u_R); 
+    M_LEFT_forward(u_L);  
+    
+    currentPos_L = encL.read(); 
+    currentPos_R = -encR.read(); 
+    if (currentPos_R >= finalPos_R || currentPos_L >= finalPos_L) {
+      stopMove();
+      return;
+    }
+    delay(10);
   }
 }
 
@@ -336,13 +445,13 @@ void PIDForward(int distance) {
 
 /* BEGIN Instruction Handling *************************************/
 
-void instructionHandler(char instruction){
+void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
   switch (instruction) {
     case 'L': rotateLeft(90); break;
     case 'R': rotateRight(90); break;
     case 'B': rotateRight(180); break;
-    case 'F': PIDForward(STRAIGHT_DISTANCE); break;
-    case 'C': PIDForward(CURVE_DISTANCE); break;
+    case 'F': PIDForward(STRAIGHT_DISTANCE, encL, encR); break;
+    case 'C': PIDForward(CURVE_DISTANCE, encL, encR); break;
     case 'Y': 
       ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
       delay(150);
@@ -473,61 +582,61 @@ void setup() {
 /* MAIN LOOP *************************************/
 
 void loop() {
-  while (WiFi.status() != WL_CONNECTED || WiFi.localIP() == IPAddress(0,0,0,0)) {
-    WiFi.reconnect();
-    delay(500);
-  }
+  Encoder encR(M_RIGHT_ENC_A, M_RIGHT_ENC_B); //right wheel, forward neg
+  Encoder encL(M_LEFT_ENC_A, M_LEFT_ENC_B); //left wheel, forward pos
 
-  WiFiClient client = server.available();   // listen for incoming clients
+  while(true) {
+    WiFiClient client = server.available();   // listen for incoming clients
 
-  if (client) {                             
-    String currentLine = "";                
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read
-        char c = client.read();             // read a byte
-        if (c == '\n' && currentLine.length() != 0) {    
-          // newline -> clear currentLine:
-          currentLine = "";
-        } else if (c == '\n' && currentLine.length() == 0) {
-          // blank line = end of the client HTTP request -> send a response
-          client.println("HTTP/1.1 200 OK");        // response code
-          client.println("Content-type:text/html"); // content-type
-          client.println();                         // end of header
-          client.print("<p>Connected!</p><br>");     // response content
-          client.println();                         // end of response content
-          break;
-        } else if (c != '\r') {
-          // anything but a carriage return character -> add to currentLine
-          currentLine += c;
-        }
-        
-        if (currentLine.endsWith("/instruct")) {
-          String instructions = currentLine.substring(currentLine.indexOf("GET /") + 5, currentLine.indexOf("/instruct"));
-
-          PIDForward(CENTER_ON_NODE_DISTANCE); // move up to the node
-
-          // left final instruction out of the loop (final forward/curve instructions are handled differently)
-          for (byte i = 0; i < sizeof(instructions); i = i + 1) {
-            char instruction = instructions[i];
-            instructionHandler(instruction);
-
-            // for forward/curve instructions, move up to the node to finish the instruction
-            if (instruction == 'F' || instruction == 'C') { 
-              PIDForward(CENTER_ON_NODE_DISTANCE);
-            }
+    if (client) {                           
+      String currentLine = "";                
+      while (client.connected()) {            // loop while the client's connected
+        if (client.available()) {             // if there's bytes to read
+          char c = client.read();             // read a byte
+          if (c == '\n' && currentLine.length() != 0) {    
+            // newline -> clear currentLine:
+            currentLine = "";
+          } else if (c == '\n' && currentLine.length() == 0) {
+            // blank line = end of the client HTTP request -> send a response
+            client.println("HTTP/1.1 200 OK");        // response code
+            client.println("Content-type:text/html"); // content-type
+            client.println();                         // end of header
+            client.print("<p>Connected!</p><br>");     // response content
+            client.println();                         // end of response content
+            break;
+          } else if (c != '\r') {
+            // anything but a carriage return character -> add to currentLine
+            currentLine += c;
           }
           
-          // the last instruction in the set doesn't move the mouse up to the node yet
-          instructionHandler(instructions[sizeof(instructions) - 1]);
+          if (currentLine.endsWith("/instruct")) {
+            String instructions = currentLine.substring(currentLine.indexOf("GET /") + 5, currentLine.indexOf("/instruct"));
 
-          // Send GET request to instruction server
-          pingJetson("http://" + client.remoteIP().toString() + ":8000/next");
+            PIDForwardNoLine(CENTER_ON_NODE_DISTANCE, encL, encR); // move up to the node
+
+            // left final instruction out of the loop (final forward/curve instructions are handled differently)
+            for (byte i = 0; i < sizeof(instructions) - 1; i = i + 1) {
+              char instruction = instructions[i];
+              instructionHandler(instruction, encL, encR);
+
+              // for forward/curve instructions, move up to the node to finish the instruction
+              if (instruction == 'F' || instruction == 'C') {
+                PIDForwardNoLine(CENTER_ON_NODE_DISTANCE, encL, encR);
+              }
+            }
+            
+            // the last instruction in the set doesn't move the mouse up to the node yet
+            instructionHandler(instructions[sizeof(instructions) - 1], encL, encR);
+
+            // Send GET request to instruction server
+            pingJetson("http://" + client.remoteIP().toString() + ":8000/next");
+          }
         }
       }
-    }
 
-    // close the connection:
-    client.stop();
-    Serial.println("Client Disconnected.");
+      // close the connection:
+      client.stop();
+      Serial.println("Client Disconnected.");
+    }
   }
 }
