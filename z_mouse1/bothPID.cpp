@@ -117,12 +117,12 @@ float prevError_R = 0;
 int endFlag = 0;
 
 //PID constants
-float Kp_R = 1.56;
-float Ki_R = 1;
+float Kp_R = 1.02;
+float Ki_R = 0.8;
 float Kd_R = 0.1;
 
-float Kp_L = 1.62;
-float Ki_L = 1.2;
+float Kp_L = 1.86;
+float Ki_L = 0.5;
 float Kd_L = 0.1;
 
 void setup() {

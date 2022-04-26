@@ -7,10 +7,10 @@
 #define ROTATION 360 //ticks for one wheel rotation
 #define WHEEL_RADIUS 16 //mm
 
-const unsigned int M_LEFT_ENC_A = 39;
-const unsigned int M_LEFT_ENC_B = 38;
-const unsigned int M_RIGHT_ENC_A = 37;
-const unsigned int M_RIGHT_ENC_B = 36;
+const unsigned int M1_ENC_A = 39;
+const unsigned int M1_ENC_B = 38;
+const unsigned int M2_ENC_A = 37;
+const unsigned int M2_ENC_B = 36;
 
 const unsigned int M_LEFT_IN_1 = 13;
 const unsigned int M_LEFT_IN_2 = 12;
@@ -98,7 +98,7 @@ int prevPos = 0;
 
 float targetVel = 10;  //in cm/s
 float targetPos = 0;
-int targetDist = 50; //desired distance in cm
+int targetDist = 1000; //desired distance in cm
 float finalPos = 0; //desired endpoint in encoder ticks
 
 float currentError = 0;
@@ -111,8 +111,8 @@ boolean initialStop = true;
 int endFlag = 0;
 
 //PID constants
-float Kp = 1.56;
-float Ki = 1;
+float Kp = 0.2;
+float Ki = 0.1;
 float Kd = 0.1;
 
 void setup() {
@@ -143,41 +143,44 @@ void setup() {
 
 void loop() {
   //create encoder objects in loop to avoid throwing exception
-  Encoder encL(M_LEFT_ENC_A, M_LEFT_ENC_B); //left wheel, forward pos
-  Encoder encR(M_RIGHT_ENC_A, M_RIGHT_ENC_B); //right wheel, forward neg
+  Encoder encL(M1_ENC_A, M1_ENC_B); //left wheel, forward pos
+  Encoder encR(M2_ENC_A, M2_ENC_B); //right wheel, forward neg
 
   encR.write(0);
   delay(10);
    
   while(endFlag != 1) {  //"actual main loop"
     long currentTime = micros(); //time in us
-    int currentPos = -encR.read();
+    int currentPos = encR.read(); //actually left
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
     float currentVel = ((float)(currentPos - prevPos)/ROTATION)/deltaTime; //rev per sec
     float metricVel = currentVel*2*PI*WHEEL_RADIUS/10; //in cm/s
     if(metricVel != 0) { //don't change setpoint until we start moving 
       initialStop = false;
     }
-    Serial.print(metricVel); Serial.print(','); //for tuning PID
-    Serial.print(targetVel); Serial.println();
+    //Serial.print(metricVel); Serial.print(','); //for tuning PID
+    //Serial.print(targetVel); Serial.println();
 
     //calculate desired position (ticks)
     float deltaPos = (targetVel*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
-    targetPos = targetPos + deltaPos;
-
+    if(initialStop) { //if starting from rest, don't change target
+      targetPos = currentPos + deltaPos; 
+    }
+    else { //otherwise continue as normal
+      targetPos = targetPos + deltaPos;
+    }
     //calculate control values
     currentError = targetPos - currentPos;
     integral = integral + currentError*deltaTime;
-    //derivative = (currentError - prevError)/deltaTime;
-    derivative = -(currentPos-prevPos)/deltaTime;
-
+    derivative = (currentError - prevError)/deltaTime;
+  
     float u = Kp*currentError + Ki*integral + Kd*derivative;
   
-    /*Serial.print("Current Position: "); Serial.print(currentPos); Serial.println();
+    Serial.print("Current Position: "); Serial.print(currentPos); Serial.println();
     Serial.print("Delta Position: "); Serial.print(deltaPos); Serial.println();
     Serial.print("Target Position: "); Serial.print(targetPos); Serial.println();
     Serial.print("Error: "); Serial.print(currentError); Serial.println();
-    Serial.print("Velocity: "); Serial.print(currentVel); Serial.println();*/
+    Serial.print("Velocity: "); Serial.print(currentVel); Serial.println();
   
     //update variables
     prevPos = currentPos;
@@ -188,15 +191,18 @@ void loop() {
     if (u > MAX_PWM_VALUE) { //if too large, cap
       u = MAX_PWM_VALUE;
     }
+    else if (u < MIN_PWM_VALUE && u > 0) {  //if too small
+      u = BASE_PWM;
+    }
     else if (u <= 0) {
       u = 0;
     }
 
-    //Serial.print("Control: "); Serial.print(u); Serial.println();
-    //Serial.println(); Serial.println();
-    M_RIGHT_forward(u);  
+    Serial.print("Control: "); Serial.print(u); Serial.println();
+    Serial.println(); Serial.println();
+    M_RIGHT_forward(u);  //actually left, switched for one mouse
     delay(10);
-    currentPos = -encR.read(); 
+    currentPos = encR.read(); //actually left
     /*if (currentPos >= finalPos) {
       stopMove();
       endFlag = 1;

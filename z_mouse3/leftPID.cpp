@@ -110,7 +110,7 @@ int endFlag = 0;
 //PID constants
 float Kp = 1.62;
 float Ki = 1.2;
-float Kd = 0.2083;
+float Kd = 0.1;
 
 void setup() {
   pinMode(14, OUTPUT);

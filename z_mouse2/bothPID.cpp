@@ -237,9 +237,9 @@ void loop() {
     M_LEFT_forward(u_L);  
     currentPos_L = encL.read(); 
     currentPos_R = -encR.read(); 
-    if (currentPos_R >= finalPos_R || currentPos_L >= finalPos_L) {
+    /*if (currentPos_R >= finalPos_R || currentPos_L >= finalPos_L) {
       stopMove();
       endFlag = 1;
-    }
+    }*/
   }
 }

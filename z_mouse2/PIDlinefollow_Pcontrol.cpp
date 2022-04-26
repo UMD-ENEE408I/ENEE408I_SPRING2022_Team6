@@ -104,8 +104,6 @@ void senseLine(int *bit_buf);
 
 /*Reflectance Sensor Array*/
 int bit_buf[14];
-int leftSide = 0;
-int rightSide = 0;
 int emptyCheck = 0;
 
 /*PID Control*/
@@ -131,18 +129,18 @@ float integral_R = 0;
 float derivative_R = 0;
 float prevError_R = 0;
 
-float kP_line = 0.03;
+float kP_line = 0.04;
 int line_error = 0;
 int endFlag = 0;
 
 //PID constants
-float Kp_R = 1.56;
+float Kp_R = 0.96;
 float Ki_R = 1;
 float Kd_R = 0.25;
 
 float Kp_L = 1.62;
-float Ki_L = 1.2;
-float Kd_L = 0.2083;
+float Ki_L = 1;
+float Kd_L = 0.25;
 
 void setup() {
   pinMode(14, OUTPUT);
@@ -316,12 +314,6 @@ void senseLine(int *bit_buf) {
   for (int i = 1; i < 14; i++) {
     if(adc_buf[i] < threshold) { //below threshold, white line
       bit_buf[i] = 1;
-      if(i > 6) { //left 
-        leftSide++;
-      }
-      if(i < 6) {
-        rightSide++;
-      }
     }
     else {
       bit_buf[i] = 0;

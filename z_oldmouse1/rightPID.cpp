@@ -7,10 +7,10 @@
 #define ROTATION 360 //ticks for one wheel rotation
 #define WHEEL_RADIUS 16 //mm
 
-const unsigned int M_LEFT_ENC_A = 39;
-const unsigned int M_LEFT_ENC_B = 38;
-const unsigned int M_RIGHT_ENC_A = 37;
-const unsigned int M_RIGHT_ENC_B = 36;
+const unsigned int M1_ENC_A = 39;
+const unsigned int M1_ENC_B = 38;
+const unsigned int M2_ENC_A = 37;
+const unsigned int M2_ENC_B = 36;
 
 const unsigned int M_LEFT_IN_1 = 13;
 const unsigned int M_LEFT_IN_2 = 12;
@@ -96,7 +96,7 @@ void turnRight(int pwm) {
 long prevTime = 0;
 int prevPos = 0;
 
-float targetVel = 10;  //in cm/s
+float targetVel = 30;  //in cm/s
 float targetPos = 0;
 int targetDist = 50; //desired distance in cm
 float finalPos = 0; //desired endpoint in encoder ticks
@@ -111,9 +111,9 @@ boolean initialStop = true;
 int endFlag = 0;
 
 //PID constants
-float Kp = 1.56;
-float Ki = 1;
-float Kd = 0.1;
+float Kp = 0.3;
+float Ki = 0.08;
+float Kd = 0.06;
 
 void setup() {
   pinMode(14, OUTPUT);
@@ -143,15 +143,15 @@ void setup() {
 
 void loop() {
   //create encoder objects in loop to avoid throwing exception
-  Encoder encL(M_LEFT_ENC_A, M_LEFT_ENC_B); //left wheel, forward pos
-  Encoder encR(M_RIGHT_ENC_A, M_RIGHT_ENC_B); //right wheel, forward neg
+  Encoder encL(M1_ENC_A, M1_ENC_B); //left wheel, forward pos
+  Encoder encR(M2_ENC_A, M2_ENC_B); //right wheel, forward neg
 
-  encR.write(0);
+  encL.write(0);
   delay(10);
    
   while(endFlag != 1) {  //"actual main loop"
     long currentTime = micros(); //time in us
-    int currentPos = -encR.read();
+    int currentPos = -encL.read(); //actually left
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
     float currentVel = ((float)(currentPos - prevPos)/ROTATION)/deltaTime; //rev per sec
     float metricVel = currentVel*2*PI*WHEEL_RADIUS/10; //in cm/s
@@ -163,14 +163,17 @@ void loop() {
 
     //calculate desired position (ticks)
     float deltaPos = (targetVel*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
-    targetPos = targetPos + deltaPos;
-
+    if(initialStop) { //if starting from rest, don't change target
+      targetPos = currentPos + deltaPos; 
+    }
+    else { //otherwise continue as normal
+      targetPos = targetPos + deltaPos;
+    }
     //calculate control values
     currentError = targetPos - currentPos;
     integral = integral + currentError*deltaTime;
-    //derivative = (currentError - prevError)/deltaTime;
-    derivative = -(currentPos-prevPos)/deltaTime;
-
+    derivative = (currentError - prevError)/deltaTime;
+  
     float u = Kp*currentError + Ki*integral + Kd*derivative;
   
     /*Serial.print("Current Position: "); Serial.print(currentPos); Serial.println();
@@ -194,9 +197,9 @@ void loop() {
 
     //Serial.print("Control: "); Serial.print(u); Serial.println();
     //Serial.println(); Serial.println();
-    M_RIGHT_forward(u);  
+    M_LEFT_forward(u);  //actually left, switched for one mouse
     delay(10);
-    currentPos = -encR.read(); 
+    currentPos = -encL.read(); //actually left
     /*if (currentPos >= finalPos) {
       stopMove();
       endFlag = 1;

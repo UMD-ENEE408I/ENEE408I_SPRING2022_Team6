@@ -6,6 +6,13 @@
 #define GEAR_RATIO 29.86 //motor spec
 #define ROTATION 360 //ticks for one wheel rotation
 #define WHEEL_RADIUS 16 //mm
+#define threshold 630 //differentiate white line from gray foam 
+
+Adafruit_MCP3008 adc1;
+Adafruit_MCP3008 adc2;
+
+const unsigned int ADC_1_CS = 2;
+const unsigned int ADC_2_CS = 17;
 
 const unsigned int M_LEFT_ENC_A = 39;
 const unsigned int M_LEFT_ENC_B = 38;
@@ -82,23 +89,31 @@ void moveBackward(int pwm) {
 }
 
 void turnLeft(int pwm) {
-  M_RIGHT_stop();
-  M_LEFT_forward(pwm);
-}
-
-void turnRight(int pwm) {
   M_LEFT_stop();
   M_RIGHT_forward(pwm);
 }
+
+void turnRight(int pwm) {
+  M_RIGHT_stop();
+  M_LEFT_forward(pwm);
+}
 /*END basic motor movements*/
+
+//declaration
+void senseLine(int *bit_buf);
+
+/*Reflectance Sensor Array*/
+int bit_buf[14];
+int emptyCheck = 0;
 
 /*PID Control*/
 long prevTime = 0;
 int prevPos_L = 0;
 int prevPos_R = 0;
 
-float targetVel = 10;  //in cm/s
-int targetDist = 40; //desired distance in cm
+float targetVel_L = 10;  //in cm/s
+float targetVel_R = 10;  //in cm/s
+int targetDist = 50; //desired distance in cm
 float targetPos_L = 0;
 float targetPos_R = 0;
 float finalPos_L = 0; //desired endpoint in encoder ticks
@@ -114,16 +129,18 @@ float integral_R = 0;
 float derivative_R = 0;
 float prevError_R = 0;
 
+float kP_line = 0.03;
+int line_error = 0;
 int endFlag = 0;
 
 //PID constants
 float Kp_R = 1.56;
 float Ki_R = 1;
-float Kd_R = 0.1;
+float Kd_R = 0.25;
 
 float Kp_L = 1.62;
 float Ki_L = 1.2;
-float Kd_L = 0.1;
+float Kd_L = 0.2083;
 
 void setup() {
   pinMode(14, OUTPUT);
@@ -144,6 +161,9 @@ void setup() {
 
   pinMode(M_RIGHT_I_SENSE, INPUT);
   pinMode(M_LEFT_I_SENSE, INPUT);
+
+  adc1.begin(ADC_1_CS);  
+  adc2.begin(ADC_2_CS);
   
   delay(3000);
   prevPos_L = 0;  //get start position
@@ -158,27 +178,29 @@ void loop() {
   Encoder encR(M_RIGHT_ENC_A, M_RIGHT_ENC_B); //right wheel, forward neg
   Encoder encL(M_LEFT_ENC_A, M_LEFT_ENC_B); //left wheel, forward pos
 
-  encL.write(0); encR.write(0);
+  encL.write(0); encR.write(0); //clear encoders
   delay(10);
    
   while(endFlag != 1) {  //"actual main loop"
     long currentTime = micros(); //time in us
-    int currentPos_L = encL.read();
-    int currentPos_R = -encR.read(); 
+    int currentPos_L = encL.read(); //actually right
+    int currentPos_R = -encR.read(); // actually left
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
     float currentVel_L = ((float)(currentPos_L - prevPos_L)/ROTATION)/deltaTime; //rev per sec
     float metricVel_L = currentVel_L*2*PI*WHEEL_RADIUS/10; //in cm/s
     float currentVel_R = ((float)(currentPos_R - prevPos_R)/ROTATION)/deltaTime; //rev per sec
     float metricVel_R = currentVel_R*2*PI*WHEEL_RADIUS/10; //in cm/s
-    
-    Serial.print(metricVel_L); Serial.print(','); //for tuning PID
+    /*Serial.print(metricVel_L); Serial.print(','); //for tuning PID
     Serial.print(metricVel_R); Serial.print(',');
-    Serial.print(targetVel); Serial.println();
+    Serial.print(targetVel); Serial.println();*/
 
     //calculate desired position (ticks)
-    float deltaPos = (targetVel*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
-    targetPos_L = targetPos_L + deltaPos;
-    targetPos_R = targetPos_R + deltaPos;
+    float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+    float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+
+    //increment target position
+    targetPos_L = targetPos_L + deltaPos_L;
+    targetPos_R = targetPos_R + deltaPos_R;
 
     //calculate control values
     currentError_L = targetPos_L - currentPos_L;
@@ -188,6 +210,7 @@ void loop() {
     currentError_R = targetPos_R - currentPos_R;
     integral_R = integral_R + currentError_R*deltaTime;
     derivative_R = (currentError_R - prevError_R)/deltaTime;
+    //derivative_R = -(currentPos_R-prevPos_R)/deltaTime;
 
     float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
     float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
@@ -209,7 +232,7 @@ void loop() {
     prevPos_R = currentPos_R;
     prevError_L = currentError_L;
     prevError_R = currentError_R;
-
+    
     //set motor power
     if (u_L > MAX_PWM_VALUE) { //if too large, cap
       u_L = MAX_PWM_VALUE;
@@ -218,24 +241,83 @@ void loop() {
       u_L = 0;
     }
 
-   //set motor power
+    //set motor power
     if (u_R > MAX_PWM_VALUE) { //if too large, cap
       u_R = MAX_PWM_VALUE;
     }
     else if (u_R <= 0) {
       u_R = 0;
     }
+    /*Serial.print("Control: "); Serial.print(u_R); Serial.println();
+    Serial.println(); Serial.println();*/
 
-    //Serial.print("Control: "); Serial.print(u_R); Serial.println();
-    //Serial.println(); Serial.println();
+    //drive motors
     M_RIGHT_forward(u_R); 
     M_LEFT_forward(u_L);  
-    delay(10); //NECESSARY
-    currentPos_L = encL.read(); 
+
+    //read reflectance sensors to stay on line
+    senseLine(bit_buf);
+    /*for (int i = 1; i < 14; i++) {
+      Serial.print(bit_buf[i]); Serial.print("\t");
+    }
+    Serial.println();*/
+
+    //proportional control for line following correction
+    int sum = 0;
+    int tally = 0;  //number of sensors active
+    for(int i = 1; i < 14; i++) { //tally up all reflectance sensors
+      if(bit_buf[i] == 1) {
+        sum = sum + i;  //if that sensor is on, add its index
+        tally++;
+      }
+    }
+    float line_pos = (float)sum/tally; //average position on the line
+    Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
+    int target_line = 7; //desired average is the center
+    line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
+    Serial.print("Error: "); Serial.print(line_error); Serial.println();
+    float adjust_vel = kP_line * line_error;
+    Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
+    if(line_error == 0) {  //on track, reset
+      targetVel_L = 10;
+      targetVel_R = 10;
+    }
+    else {
+      targetVel_L += adjust_vel;  //adjust is pos --> left needs to be pos.
+      targetVel_R -= adjust_vel;  //adjust is neg --> right needs to be pos. (double neg)
+    }
+    if(emptyCheck == 13) { //no sensors active, off line, stop
+      stopMove();
+      endFlag = 1;
+    }
+    emptyCheck = 0;
+    /*currentPos_L = encL.read(); 
     currentPos_R = -encR.read(); 
-    /*if (currentPos_R >= finalPos_R || currentPos_L >= finalPos_L) {
+    if (currentPos_R >= finalPos_R || currentPos_L >= finalPos_L) {
       stopMove();
       endFlag = 1;
     }*/
+    delay(10);
+  }
+}
+
+void senseLine(int *bit_buf) {
+  int adc_buf[14];
+  //read line sensor values, indices correspond to numbered sensors on the mouse
+  for (int i = 0, j = 1; i < 8; i++) {
+    adc_buf[j] = adc1.readADC(i);
+    adc_buf[j+1] = adc2.readADC(i);
+    j = j+2;
+  }
+  
+  //convert to binary values, 0 = gray, 1 = white
+  for (int i = 1; i < 14; i++) {
+    if(adc_buf[i] < threshold) { //below threshold, white line
+      bit_buf[i] = 1;
+    }
+    else {
+      bit_buf[i] = 0;
+      emptyCheck++;
+    }
   }
 }
