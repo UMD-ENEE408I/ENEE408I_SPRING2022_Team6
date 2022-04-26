@@ -25,7 +25,7 @@ while True:
     #junction_gray = cv2.cvtColor(junction, cv2.COLOR_BGR2GRAY)
 
     junction_gray = cv2.cvtColor(junction, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(junction_gray,200,255,cv2.THRESH_BINARY)
+    ret, thresh = cv2.threshold(junction_gray,190,255,cv2.THRESH_BINARY)
 
     # junction_input = thresh[10:10, 10:10]
 # for junction_type in junction_tests:
