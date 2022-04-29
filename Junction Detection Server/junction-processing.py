@@ -8,10 +8,10 @@ import json
 
 PORT = 9000
 
-match_tests = [('F',220,420,140,480), ('FL',0,420,140,480), ('FR',220,640,140,480),
-            ('L',0,280,340,480), ('LF',35,400,140,480), ('LB',0,320,280,480),
-            ('R',360,640,340,480), ('RF',240,615,140,480), ('RB',320,640,280,480),
-            ('END',0,640,120,480)]
+match_tests = [('forward',220,420,140,480), ('forward to left',0,420,140,480), ('forward to right',220,640,140,480),
+            ('left',0,280,340,480), ('left to forward',35,400,140,480), ('left to backward',0,320,280,480),
+            ('right',360,640,340,480), ('right to forward',240,615,140,480), ('right to backward',320,640,280,480),
+            ('end',0,640,120,480)]
 
 # Load a sample picture and learn how to recognize it.
 chan_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//jackie_chan//jackie_1.jpg")
@@ -64,7 +64,7 @@ def get_junction(mouse):
             result = cv2.matchTemplate(test_im_copy, template_gray, cv2.TM_CCORR_NORMED)
             min_val, similarity, min_loc, location = cv2.minMaxLoc(result)
 
-            if (similarity > 0.8) and match_type == 'END':
+            if (similarity > 0.8) and match_type == 'end':
                 is_end = True
                 print(f"{match_type} ({similarity:.0%})")
             if (similarity > 0.8):
