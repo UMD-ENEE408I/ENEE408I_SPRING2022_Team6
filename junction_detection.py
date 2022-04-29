@@ -9,7 +9,6 @@ PORT = 8000
 match_tests = [('F',304,424,155,480), ('LB',0,320,330,480), ('L',0,320,330,480), ('LF',89,364,155,480),
             ('FL',144,419,105,480), ('FR',311,586,105,480), ('RF',364,639,155,480), ('R',320,640,330,480), ('RB',320,640,330,480)]
 
-# Server Functions
 def get_junction(mouse):
     video_capture = cv2.VideoCapture(0)
 
@@ -51,7 +50,7 @@ def get_junction(mouse):
     video_capture.release()
     cv2.destroyAllWindows()
 
-
+# Server Functions
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         get_junction(self.path)
