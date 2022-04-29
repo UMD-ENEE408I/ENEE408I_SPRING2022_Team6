@@ -13,7 +13,30 @@ match_tests = [('F',220,420,140,480), ('FL',0,420,140,480), ('FR',220,640,140,48
             ('R',360,640,340,480), ('RF',240,615,140,480), ('RB',320,640,280,480),
             ('END',0,640,120,480)]
 
+# Load a sample picture and learn how to recognize it.
+chan_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//jackie_chan//jackie_1.jpg")
+chan_face_encoding = face_recognition.face_encodings(chan_image)[0]
 
+# Load a second sample picture and learn how to recognize it.
+reeves_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//keanu_reeves//keanu_1.jpg")
+reeves_face_encoding = face_recognition.face_encodings(reeves_image)[0]
+
+# Load a second sample picture and learn how to recognize it.
+rock_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//the_rock//rock_1.jpg")
+rock_face_encoding = face_recognition.face_encodings(rock_image)[0]
+
+
+# Create arrays of known face encodings and their names
+known_face_encodings = [
+    chan_face_encoding,
+    reeves_face_encoding,
+    rock_face_encoding,
+]
+known_face_names = [
+    "Jackie Chan",
+    "Keanu Reeves",
+    "Dwayne Johnson",
+]
 
 def get_junction(mouse):
     video_capture = cv2.VideoCapture(0)
@@ -75,34 +98,9 @@ def get_junction(mouse):
 
 
 def get_vip(mouse):
-        
+
     # Get a reference to webcam #0 (the default one)
     video_capture = cv2.VideoCapture(0)
-
-    # Load a sample picture and learn how to recognize it.
-    chan_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//jackie_chan//jackie_1.jpg")
-    chan_face_encoding = face_recognition.face_encodings(chan_image)[0]
-
-    # Load a second sample picture and learn how to recognize it.
-    reeves_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//keanu_reeves//keanu_1.jpg")
-    reeves_face_encoding = face_recognition.face_encodings(reeves_image)[0]
-
-    # Load a second sample picture and learn how to recognize it.
-    rock_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//the_rock//rock_1.jpg")
-    rock_face_encoding = face_recognition.face_encodings(rock_image)[0]
-
-
-    # Create arrays of known face encodings and their names
-    known_face_encodings = [
-        chan_face_encoding,
-        reeves_face_encoding,
-        rock_face_encoding,
-    ]
-    known_face_names = [
-        "Jackie Chan",
-        "Keanu Reeves",
-        "Dwayne Johnson",
-    ]
 
     while True:
         # Grab a single frame of video
