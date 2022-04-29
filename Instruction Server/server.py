@@ -621,7 +621,7 @@ class Maze:
     # Get available paths, VIP name if present, and whether or not the current node is the end of the maze from the camera via GET request to the camera server's IP address for current mouse to get 
     # Returns the request's response object
     def getCameraData(self):
-        return requests.get(f"http://{self.camera_ip_addr}/{self.mouse.name}")
+        return requests.get(f"http://{self.camera_ip_addr}:9000/{self.mouse.name}")
 
 
     # Calculates and sends the next instruction for the current mouse
