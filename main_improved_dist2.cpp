@@ -134,48 +134,196 @@ float calibrateMouse() {
   return zOffset;
 }
 
-void rotateLeft(int deg) {
+void rotateLeft(int deg, Encoder &encL, Encoder &encR) {
   float zPosition = 0.0;
   float timeElapsed = 0.0;
   float zVel = 0.0;
   float zOffset = calibrateMouse();
+  unsigned long prevTime_Rot = millis();
 
-  unsigned long prevTime = millis();
+  /*PID Control*/
+  float targetVel_L = 10;  //in cm/s
+  float targetVel_R = 10;  //in cm/s
+  float targetPos_L = 0;
+  float targetPos_R = 0;
 
-  M_LEFT_backward(100);
-  M_RIGHT_forward(100);
+  float currentError_L = 0;
+  float integral_L = 0;
+  float derivative_L = 0;
+  float prevError_L = 0;
 
-  while (zPosition < deg*DEG_TO_RAD) {
-    mpu.getEvent(&a, &g, &temp);
-    zVel = g.gyro.z - zOffset;
-    timeElapsed = millis() - prevTime;
-    zPosition = zPosition + (zVel * timeElapsed / 1000);
-    prevTime = millis();
-  }
+  float currentError_R = 0;
+  float integral_R = 0;
+  float derivative_R = 0;
+  float prevError_R = 0;
 
-  stopMove();
-}
+  int prevPos_L = 0;  //get start position
+  int prevPos_R = 0;  //get start position
+  long prevTime = micros();  //get start time in us
+  encL.write(0); encR.write(0); //clear encoders
+  delay(10);
 
-void rotateRight(int deg) {
-  float zPosition = 0.0;
-  float timeElapsed = 0.0;
-  float zVel = 0.0;
-  float zOffset = calibrateMouse();
+  while (1) {
+    long currentTime = micros(); //time in us
+    int currentPos_L = encL.read() * -1; //backwards for left turn
+    int currentPos_R = -encR.read();
+    float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
 
-  unsigned long prevTime = millis();
+    //calculate desired position (ticks)
+    float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+    float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
 
-  M_LEFT_forward(100);
-  M_RIGHT_backward(100);
+    //increment target position
+    targetPos_L = targetPos_L + deltaPos_L;
+    targetPos_R = targetPos_R + deltaPos_R;
 
-  while (zPosition > -deg*DEG_TO_RAD) {
+    //calculate control values
+    currentError_L = targetPos_L - currentPos_L;
+    integral_L = integral_L + currentError_L*deltaTime;
+    derivative_L = (currentError_L - prevError_L)/deltaTime;
+
+    currentError_R = targetPos_R - currentPos_R;
+    integral_R = integral_R + currentError_R*deltaTime;
+    derivative_R = (currentError_R - prevError_R)/deltaTime;
+
+    float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
+    float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
+
+    //update variables
+    prevTime = currentTime;
+    prevPos_L = currentPos_L;
+    prevPos_R = currentPos_R;
+    prevError_L = currentError_L;
+    prevError_R = currentError_R;
+    
+    //set motor power
+    if (u_L > MAX_PWM_VALUE) { //if too large, cap
+      u_L = MAX_PWM_VALUE;
+    }
+    else if (u_L <= 0) {
+      u_L = 0;
+    }
+
+    //set motor power
+    if (u_R > MAX_PWM_VALUE) { //if too large, cap
+      u_R = MAX_PWM_VALUE;
+    }
+    else if (u_R <= 0) {
+      u_R = 0;
+    }
+
+    //drive motors
+    M_RIGHT_forward(u_R); 
+    M_LEFT_backward(u_L);  //rotate left backwards
+    
     mpu.getEvent(&a, &g, &temp);
     zVel = (g.gyro.z - zOffset);
-    timeElapsed = (millis() - prevTime);
+    timeElapsed = (millis() - prevTime_Rot);
     zPosition = zPosition + (zVel * timeElapsed / 1000);
-    prevTime = millis();
+    prevTime_Rot = millis();
+    Serial.println(zPosition);
+    if (zPosition >= deg*DEG_TO_RAD) {
+      stopMove();
+      return;
+    }
+    delay(10);
   }
+}
 
-  stopMove();
+void rotateRight(int deg, Encoder &encL, Encoder &encR) {
+  float zPosition = 0.0;
+  float timeElapsed = 0.0;
+  float zVel = 0.0;
+  float zOffset = calibrateMouse();
+  unsigned long prevTime_Rot = millis();
+
+  /*PID Control*/
+  float targetVel_L = 10;  //in cm/s
+  float targetVel_R = 10;  //in cm/s
+  float targetPos_L = 0;
+  float targetPos_R = 0;
+
+  float currentError_L = 0;
+  float integral_L = 0;
+  float derivative_L = 0;
+  float prevError_L = 0;
+
+  float currentError_R = 0;
+  float integral_R = 0;
+  float derivative_R = 0;
+  float prevError_R = 0;
+
+  int prevPos_L = 0;  //get start position
+  int prevPos_R = 0;  //get start position
+  long prevTime = micros();  //get start time in us
+  encL.write(0); encR.write(0); //clear encoders
+  delay(10);
+
+  while (1) {
+    long currentTime = micros(); //time in us
+    int currentPos_L = encL.read();
+    int currentPos_R = -encR.read() * -1; //backwards for right turn
+    float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
+
+    //calculate desired position (ticks)
+    float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+    float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+
+    //increment target position
+    targetPos_L = targetPos_L + deltaPos_L;
+    targetPos_R = targetPos_R + deltaPos_R;
+
+    //calculate control values
+    currentError_L = targetPos_L - currentPos_L;
+    integral_L = integral_L + currentError_L*deltaTime;
+    derivative_L = (currentError_L - prevError_L)/deltaTime;
+
+    currentError_R = targetPos_R - currentPos_R;
+    integral_R = integral_R + currentError_R*deltaTime;
+    derivative_R = (currentError_R - prevError_R)/deltaTime;
+
+    float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
+    float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
+
+    //update variables
+    prevTime = currentTime;
+    prevPos_L = currentPos_L;
+    prevPos_R = currentPos_R;
+    prevError_L = currentError_L;
+    prevError_R = currentError_R;
+    
+    //set motor power
+    if (u_L > MAX_PWM_VALUE) { //if too large, cap
+      u_L = MAX_PWM_VALUE;
+    }
+    else if (u_L <= 0) {
+      u_L = 0;
+    }
+
+    //set motor power
+    if (u_R > MAX_PWM_VALUE) { //if too large, cap
+      u_R = MAX_PWM_VALUE;
+    }
+    else if (u_R <= 0) {
+      u_R = 0;
+    }
+
+    //drive motors
+    M_LEFT_forward(u_L); 
+    M_RIGHT_backward(u_R);  //rotate right backwards
+    
+    mpu.getEvent(&a, &g, &temp);
+    zVel = (g.gyro.z - zOffset);
+    timeElapsed = (millis() - prevTime_Rot);
+    zPosition = zPosition + (zVel * timeElapsed / 1000);
+    prevTime_Rot = millis();
+    Serial.println(zPosition);
+    if (zPosition <= -deg*DEG_TO_RAD) {
+      stopMove();
+      return;
+    }
+    delay(10);
+  }
 }
 
 /* END Rotational Movement *************************************/
