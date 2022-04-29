@@ -41,6 +41,9 @@ known_face_names = [
 def get_junction(mouse):
     video_capture = cv2.VideoCapture(0)
 
+    paths = {}
+    is_end = False
+
     while True:
         
         ret, junction = video_capture.read()
@@ -60,12 +63,12 @@ def get_junction(mouse):
         
             result = cv2.matchTemplate(test_im_copy, template_gray, cv2.TM_CCORR_NORMED)
             min_val, similarity, min_loc, location = cv2.minMaxLoc(result)
-        
+
+            if (similarity > 0.8) and match_type == 'END':
+                is_end = True
+                print(f"{match_type} ({similarity:.0%})")
             if (similarity > 0.8):
-        
-                bottom_right = (location[0] + w, location[1] + h)
-                cv2.rectangle(test_im_copy, location, bottom_right, 125, 2)
-                    
+                paths[match_test] = True
                 print(f"{match_type} ({similarity:.0%})")
             
         # Display the resulting image
@@ -80,18 +83,8 @@ def get_junction(mouse):
     cv2.destroyAllWindows()
 
     return {
-        'paths': {
-            'forward': True,
-            'left': True,
-            'right': True,
-            'forward to left': False,
-            'forward to right': False,
-            'left to forward': False,
-            'right to forward': False,
-            'left to backward': False,
-            'right to backward': False
-        },
-        'is_end': False
+        'paths': paths,
+        'is_end': is_end
     }
 
 
@@ -101,6 +94,8 @@ def get_vip(mouse):
 
     # Get a reference to webcam #0 (the default one)
     video_capture = cv2.VideoCapture(0)
+
+    name = ''
 
     while True:
         # Grab a single frame of video
@@ -121,8 +116,6 @@ def get_vip(mouse):
         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
             # See if the face is a match for the known face(s)
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-
-            name = "Unknown"
 
             # If a match was found in known_face_encodings, just use the first one.
             # if True in matches:
@@ -151,11 +144,11 @@ def get_vip(mouse):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-        # Release handle to the webcam
-        video_capture.release()
-        cv2.destroyAllWindows()
+    # Release handle to the webcam
+    video_capture.release()
+    cv2.destroyAllWindows()
     
-    return 'Test VIP'
+    return name
 
 
 
