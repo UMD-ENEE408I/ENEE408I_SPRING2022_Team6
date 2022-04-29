@@ -654,8 +654,7 @@ class Maze:
             node.visited = True
 
 
-            # camera_data = self.getCameraData()
-            camera_data = get_camera_data()
+            camera_data = self.getCameraData()
 
 
             if camera_data['is_end'] and self.end is None:    
@@ -771,8 +770,7 @@ class Maze:
             node.visited = True
             
 
-            # camera_data = self.getCameraData()
-            camera_data = get_camera_data()
+            camera_data = self.getCameraData()
 
 
             if camera_data['is_end'] and self.end is None:
