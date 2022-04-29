@@ -16,8 +16,7 @@
 #define STRAIGHT_DISTANCE 15 - CENTER_ON_NODE_DISTANCE //cm
 #define CURVE_DISTANCE 15*TWO_PI/4 - CENTER_ON_NODE_DISTANCE //cm
 
-
-
+int mouse = 2;  //select which mouse is running
 
 Adafruit_MPU6050 mpu;
 Adafruit_MCP3008 adc1;
@@ -57,14 +56,24 @@ const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
 
-const char* ssid = "DerienHotspot";
-const char* password =  "ENEE408I";
+const char* ssid = "GoTerps";
+const char* password =  "goterps2022";
+
+//PID Constants
+float Kp_R = 0;
+float Ki_R = 0;
+float Kd_R = 0;
+
+float Kp_L = 0;
+float Ki_L = 0;
+float Kd_L = 0;
 
 int bit_buf[14]; //Reflectance Sensor Array
 int emptyCheck = 0;
 
 float kP_line = 0.03;
 int line_error = 0;
+float dist_adjust = 0.0;
 
 sensors_event_t a, g, temp;
 
@@ -216,20 +225,11 @@ void PIDForward(int distance, Encoder &encL, Encoder &encR) {
   float derivative_R = 0;
   float prevError_R = 0;
 
-  //PID constants
-  float Kp_R = 1.56;
-  float Ki_R = 1;
-  float Kd_R = 0.25;
-
-  float Kp_L = 1.62;
-  float Ki_L = 1.2;
-  float Kd_L = 0.2083;
-
   int prevPos_L = 0;  //get start position
   int prevPos_R = 0;  //get start position
   long prevTime = micros();  //get start time in us
-  finalPos_L = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L; //convert desired distance to encoder value
-  finalPos_R = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R; //convert desired distance to encoder value
+  finalPos_L = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L - dist_adjust; //convert desired distance to encoder value
+  finalPos_R = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R - dist_adjust; //convert desired distance to encoder value
   encL.write(0); encR.write(0); //clear encoders
   delay(10);
 
@@ -238,10 +238,6 @@ void PIDForward(int distance, Encoder &encL, Encoder &encR) {
     int currentPos_L = encL.read(); //actually right
     int currentPos_R = -encR.read(); // actually left
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
-    //float currentVel_L = ((float)(currentPos_L - prevPos_L)/ROTATION)/deltaTime; //rev per sec
-    //float metricVel_L = currentVel_L*2*PI*WHEEL_RADIUS/10; //in cm/s
-    //float currentVel_R = ((float)(currentPos_R - prevPos_R)/ROTATION)/deltaTime; //rev per sec
-    //float metricVel_R = currentVel_R*2*PI*WHEEL_RADIUS/10; //in cm/s
 
     //calculate desired position (ticks)
     float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
@@ -285,8 +281,6 @@ void PIDForward(int distance, Encoder &encL, Encoder &encR) {
     else if (u_R <= 0) {
       u_R = 0;
     }
-    /*Serial.print("Control: "); Serial.print(u_R); Serial.println();
-    Serial.println(); Serial.println();*/
 
     //drive motors
     M_RIGHT_forward(u_R); 
@@ -352,20 +346,11 @@ void PIDForwardNoLine(int distance, Encoder &encL, Encoder &encR) {
   float derivative_R = 0;
   float prevError_R = 0;
 
-  //PID constants
-  float Kp_R = 0.96;
-  float Ki_R = 1;
-  float Kd_R = 0.25;
-
-  float Kp_L = 1.62;
-  float Ki_L = 1;
-  float Kd_L = 0.25;
-
   int prevPos_L = 0;  //get start position
   int prevPos_R = 0;  //get start position
   long prevTime = micros();  //get start time in us
-  finalPos_L = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L; //convert desired distance to encoder value
-  finalPos_R = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R; //convert desired distance to encoder value
+  finalPos_L = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L - dist_adjust; //convert desired distance to encoder value
+  finalPos_R = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R - dist_adjust; //convert desired distance to encoder value
   encL.write(0); encR.write(0); //clear encoders
   delay(10);
 
@@ -552,6 +537,45 @@ void setup() {
   case MPU6050_RANGE_2000_DEG:
     Serial.println("+- 2000 deg/s");
     break;
+  }
+
+  //switch to select mouse
+  switch (mouse) {
+    case 1: 
+      dist_adjust = 0;
+      Kp_R = 1.02;
+      Ki_R = 0.8;
+      Kd_R = 0.1;
+
+      Kp_L = 1.86;
+      Ki_L = 0.5;
+      Kd_L = 0.1;
+      break;
+
+    case 2:
+      Kp_R = 0.96;
+      Ki_R = 1;
+      Kd_R = 0.25;
+
+      Kp_L = 1.62;
+      Ki_L = 1;
+      Kd_L = 0.25;
+      dist_adjust = 1.3;
+      break;
+
+    case 3:
+      Kp_R = 1.56;
+      Ki_R = 1;
+      Kd_R = 0.1;
+
+      Kp_L = 1.62;
+      Ki_L = 1.2;
+      Kd_L = 0.1;
+      dist_adjust = 0;
+      break;
+
+    default: 
+      break;
   }
 
   // WiFi
