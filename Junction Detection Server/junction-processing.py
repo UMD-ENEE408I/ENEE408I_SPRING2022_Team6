@@ -162,10 +162,10 @@ def get_vip(mouse):
 # Server Functions
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        PARAMS = get_junction(self.path)
-        PARAMS['vip'] = get_vip(self.path)
+        params = get_junction(self.path)
+        params['vip'] = get_vip(self.path)
         self.send_response(200)
-        self.wfile.write(json.dumps(PARAMS))
+        self.wfile.write(json.dumps(params))
 
 
 with socketserver.TCPServer(('', PORT), Handler) as httpd:
