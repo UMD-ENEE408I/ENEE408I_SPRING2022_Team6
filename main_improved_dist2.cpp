@@ -580,9 +580,9 @@ void PIDForwardNoLine(int distance, Encoder &encL, Encoder &encR) {
 
 void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
   switch (instruction) {
-    case 'L': rotateLeft(90); break;
-    case 'R': rotateRight(90); break;
-    case 'B': rotateRight(180); break;
+    case 'L': rotateLeft(90, encL, encR); break;
+    case 'R': rotateRight(90, encL, encR); break;
+    case 'B': rotateRight(180, encL, encR).; break;
     case 'F': PIDForward(STRAIGHT_DISTANCE, encL, encR); break;
     case 'C': PIDForward(CURVE_DISTANCE, encL, encR); break;
     case 'Y': 
