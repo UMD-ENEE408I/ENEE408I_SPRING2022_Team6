@@ -93,6 +93,8 @@ def get_junction(mouse):
 def get_vip(mouse):
             # Get a reference to webcam #0 (the default one)
             video_capture = cv2.VideoCapture(0)
+            
+            name = ''
          
             while True:
                 # Grab a single frame of video
