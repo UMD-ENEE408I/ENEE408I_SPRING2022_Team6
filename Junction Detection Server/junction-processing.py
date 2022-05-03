@@ -9,9 +9,9 @@ import json
 
 
 
-match_tests = [("forward",220,420,140,480), ("forward to left",0,420,140,480), ("forward to right",220,640,140,480),
-            ("left",0,280,340,480), ("left to forward",35,400,140,480), ("left to backward",0,320,280,480),
-            ("right",360,640,340,480), ("right to forward",240,615,140,480), ("right to backward",320,640,280,480),
+match_tests = [("forward",220,420,60,480), ("forward to left",0,420,140,480), ("forward to right",220,640,140,480),
+            ("left",0,280,240,480), ("left to forward",35,400,140,480), ("left to backward",0,320,280,480),
+            ("right",360,640,240,480), ("right to forward",240,615,140,480), ("right to backward",320,640,280,480),
             ("end",0,640,120,480)]
 
 # Load a sample picture and learn how to recognize it.
@@ -48,38 +48,46 @@ def get_junction():
 
     paths = {}
     is_end = False
+    
+    count = 0
+    num_samples = 100
+    
+    while(count < num_samples):
+            
+        ret, junction = video_capture.read()
         
-    ret, junction = video_capture.read()
-
-    junction_gray = cv2.cvtColor(junction, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(junction_gray,200,255,cv2.THRESH_BINARY)
-    
-    for match_test in match_tests:
-        match_type, left, right, top, bottom = match_test
-        test_im = thresh[top:bottom,left:right]
-    
-        template = np.array(PIL.Image.open("C://Users//hnrom//ENEE408I//templates//templates\\" + match_type + ".png"))
-        template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    
-        test_im_copy = test_im.copy()
-    
-        result = cv2.matchTemplate(test_im_copy, template_gray, cv2.TM_CCORR_NORMED)
-        min_val, similarity, min_loc, location = cv2.minMaxLoc(result)
-
-        if (similarity > 0.8) and match_type == "end":
-            is_end = True
-            print(f"{match_type} ({similarity:.0%})")
-        if (similarity > 0.8):
-            paths[match_test] = True
-            print(f"{match_type} ({similarity:.0%})")
+        junction_gray = cv2.cvtColor(junction, cv2.COLOR_BGR2GRAY)
+        ret, thresh = cv2.threshold(junction_gray,210,255,cv2.THRESH_BINARY)
+        
+        for match_test in match_tests:
+            match_type, left, right, top, bottom = match_test
+            test_im = thresh[top:bottom,left:right]
+        
+            template = np.array(PIL.Image.open("C://Users//hnrom//ENEE408I//ENEE408I_SPRING2022_Team6-demo_test_sockets//Junction Detection Server//templates\\" + match_type + ".png"))
+            template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        
+            test_im_copy = test_im.copy()
+        
+            result = cv2.matchTemplate(test_im_copy, template_gray, cv2.TM_CCORR_NORMED)
+            min_val, similarity, min_loc, location = cv2.minMaxLoc(result)
+        
+            if (similarity > 0.9) and match_type == "end":
+                is_end = True
+                print(f"{match_type} ({similarity:.0%})")
+            if (similarity > 0.78) and match_type != "end":
+                paths[match_type] = True
+                print(f"{match_type} ({similarity:.0%})")
+            
+        count = count + 1
         
     # Release handle to the webcam
-    video_capture.release()
-    cv2.destroyAllWindows()
+    # video_capture.release()
+    # cv2.destroyAllWindows()
 
     return {
         "paths": paths,
-        "is_end": is_end
+        "is_end": is_end,
+        "vip": None
     }
 
 
@@ -133,13 +141,15 @@ async def on_message(websocket, path):
     print()
     print(f"[Processing {mouse_name} junction]")
     print()
-    params = get_junction(mouse_name)
-    params["vip"] = get_vip(mouse_name)
+    params = get_junction()
+    # params["vip"] = get_vip()
     #params = get_camera_data()
     print()
     await websocket.send(json.dumps(params))
 
 start_server = websockets.serve(on_message, "localhost", 9000)
+
+print("started on port 9000")
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
