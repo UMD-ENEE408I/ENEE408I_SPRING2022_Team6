@@ -510,7 +510,7 @@ class Maze:
         self.vips = {}
         self.end = None
         self.mouse = mouse1
-        self.mouse.state = 'Searching for VIP'
+        self.mouse.state = 'Searching for end'
         self.mouse1 = mouse1
         self.mouse2 = mouse2
         self.mouse3 = mouse3
@@ -609,9 +609,7 @@ class Maze:
 
         url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{self.instruction}"
 
-        with open(r'./Maze Display/data/data.txt', 'w') as file:
-            file.write(url)
-            file.close()
+       
 
         return url
 
@@ -905,7 +903,7 @@ def initialize_demo():
 
     print()
 
-    mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
+    """mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
     print(f"Mouse One VIP: {mouse_one_vip}")
     print(f"Mouse Two VIP: {mouse_two_vip}")
     print(f"Mouse Three VIP: {mouse_three_vip}")
@@ -917,13 +915,13 @@ def initialize_demo():
     print(f"Mouse Three IP Address: {mouse_three_ip_addr}")
     print()
 
-    camera_ip_addr = input('Enter Camera IP Address: ')
+    camera_ip_addr = input('Enter Camera IP Address: ')"""
 
-    mouse1 = Mouse('Mouse 1', mouse_one_ip_addr, 0, 0, 'n', mouse_one_vip)
-    mouse2 = Mouse('Mouse 2', mouse_two_ip_addr, 0, 0, 'n', mouse_two_vip)
-    mouse3 = Mouse('Mouse 3', mouse_three_ip_addr, 0, 0, 'n', mouse_three_vip)
+    mouse1 = Mouse('Mouse 1', '192.168.43.54', 0, 0, 'n', 'a')
+    mouse2 = Mouse('Mouse 2', 'a', 0, 0, 'n', 'a')
+    mouse3 = Mouse('Mouse 3', 'a', 0, 0, 'n', 'a')
 
-    maze = Maze(mouse1, mouse2, mouse3, camera_ip_addr)
+    maze = Maze(mouse1, mouse2, mouse3, '127.0.0.1:9000')
 
     print()
 
