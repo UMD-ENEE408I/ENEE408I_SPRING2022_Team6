@@ -4,6 +4,7 @@
 #include <Encoder.h>
 #include "WiFi.h"
 #include "HTTPClient.h"
+#include "WebSocketsServer.h"
 
 #define GEAR_RATIO 29.86 //motor spec
 #define ROTATION 360 //ticks for one wheel rotation
@@ -77,7 +78,7 @@ float dist_adjust = 0.0;
 
 sensors_event_t a, g, temp;
 
-WiFiServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(80);
 HTTPClient http;
 
 
@@ -743,9 +744,6 @@ void setup() {
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-
-  server.begin();
-  
 }
 
 
@@ -754,61 +752,61 @@ void setup() {
 /* MAIN LOOP *************************************/
 
 void loop() {
+
   Encoder encR(M_RIGHT_ENC_A, M_RIGHT_ENC_B); //right wheel, forward neg
   Encoder encL(M_LEFT_ENC_A, M_LEFT_ENC_B); //left wheel, forward pos
 
-  while(true) {
-    WiFiClient client = server.available();   // listen for incoming clients
+  auto onWebSocketEvent = [&encL = encL, &encR = encR](uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
 
-    if (client) {                           
-      String currentLine = "";                
-      while (client.connected()) {            // loop while the client's connected
-        if (client.available()) {             // if there's bytes to read
-          char c = client.read();             // read a byte
-          if (c == '\n' && currentLine.length() != 0) {    
-            // newline -> clear currentLine:
-            currentLine = "";
-          } else if (c == '\n' && currentLine.length() == 0) {
-            // blank line = end of the client HTTP request -> send a response
-            client.println("HTTP/1.1 200 OK");        // response code
-            client.println("Content-type:text/html"); // content-type
-            client.println();                         // end of header
-            client.print("<p>Connected!</p><br>");     // response content
-            client.println();                         // end of response content
-            break;
-          } else if (c != '\r') {
-            // anything but a carriage return character -> add to currentLine
-            currentLine += c;
-          }
-          
-          if (currentLine.endsWith("/instruct")) {
-            String instructions = currentLine.substring(currentLine.indexOf("GET /") + 5, currentLine.indexOf("/instruct"));
-
-            PIDForwardNoLine(CENTER_ON_NODE_DISTANCE, encL, encR); // move up to the node
-
-            // left final instruction out of the loop (final forward/curve instructions are handled differently)
-            for (int i = 0; i < instructions.length() - 1; i = i + 1) {
-              char instruction = instructions[i];
-              instructionHandler(instruction, encL, encR);
-
-              // for forward/curve instructions, move up to the node to finish the instruction
-              if (instruction == 'F' || instruction == 'C') {
-                PIDForwardNoLine(CENTER_ON_NODE_DISTANCE, encL, encR);
-              }
-            }
-
-            // the last instruction in the set doesn't move the mouse up to the node yet
-            instructionHandler(instructions[instructions.length() - 1], encL, encR);
-
-            // Send GET request to instruction server
-            pingJetson("http://" + client.remoteIP().toString() + ":8000/next");
-          }
-        }
+    switch (type) {
+      case WStype_DISCONNECTED: {
+        Serial.printf("[%u] Disconnected!", num);
+        break;
       }
 
-      // close the connection:
-      client.stop();
-      Serial.println("Client Disconnected.");
+      case WStype_CONNECTED: {
+        IPAddress ip = webSocket.remoteIP(num);
+        Serial.printf("[%u] Connection from ", num);
+        Serial.printf(ip.toString().c_str());
+        break;
+      }
+
+      case WStype_TEXT: {
+        Serial.printf("[%u] Text: %s\n", num, payload);
+        Serial.println();
+
+        String instructions = String((char *)payload);
+
+        PIDForwardNoLine(CENTER_ON_NODE_DISTANCE, encL, encR); // move up to the node
+
+        // left final instruction out of the loop (final forward/curve instructions are handled differently)
+        for (int i = 0; i < instructions.length() - 1; i = i + 1) {
+          char instruction = instructions[i];
+          instructionHandler(instruction, encL, encR);
+
+          // for forward/curve instructions, move up to the node to finish the instruction
+          if (instruction == 'F' || instruction == 'C') {
+            PIDForwardNoLine(CENTER_ON_NODE_DISTANCE, encL, encR);
+          }
+        }
+
+        // the last instruction in the set doesn't move the mouse up to the node yet
+        instructionHandler(instructions[instructions.length() - 1], encL, encR);
+
+        webSocket.sendTXT(num, payload);
+        delay(100);
+        break;
+      }
+      
+      default:
+        break;
     }
+  };
+
+  webSocket.begin();
+  webSocket.onEvent(onWebSocketEvent);
+
+  while(true) {
+    webSocket.loop();
   }
 }
