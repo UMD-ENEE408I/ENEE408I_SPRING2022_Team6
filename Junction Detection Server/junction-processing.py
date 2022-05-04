@@ -5,9 +5,24 @@ import PIL
 import asyncio
 import websockets
 import json
+import threading
 
 
-
+params = {
+    "paths": {
+        "forward": False,
+        "left": False,
+        "right": False,
+        "forward to left": False,
+        "forward to right": False,
+        "left to forward": False,
+        "right to forward": False,
+        "left to backward": False,
+        "right to backward": False
+    },
+    "is_end": False,
+    "vip": ""
+}
 
 match_tests = [("forward",220,420,60,480), ("forward to left",0,420,140,480), ("forward to right",220,640,140,480),
             ("left",0,280,240,480), ("left to forward",35,400,140,480), ("left to backward",0,320,280,480),
@@ -40,17 +55,16 @@ known_face_names = [
     "Dwayne Johnson",
 ]
 
-
+video_capture = cv2.VideoCapture(0)
 
 
 def get_junction():
-    video_capture = cv2.VideoCapture(0)
 
     paths = {}
     is_end = False
     
     count = 0
-    num_samples = 100
+    num_samples = 10
     
     while(count < num_samples):
             
@@ -74,40 +88,28 @@ def get_junction():
             if (similarity > 0.9) and match_type == "end":
                 is_end = True
                 print(f"{match_type} ({similarity:.0%})")
-            if (similarity > 0.78) and match_type != "end":
+            elif (similarity > 0.78):
                 paths[match_type] = True
                 print(f"{match_type} ({similarity:.0%})")
             
         count = count + 1
-        
-    # Release handle to the webcam
-    # video_capture.release()
-    # cv2.destroyAllWindows()
 
-    return {
-        "paths": paths,
-        "is_end": is_end,
-        "vip": None
-    }
+    params["paths"] = paths
+    params["is_end"] = is_end
 
 
 
 
 def get_vip():
-    # Get a reference to webcam #0 (the default one)
-    video_capture = cv2.VideoCapture(0)
     
     name = ""
 
     # Grab a single frame of video
     ret, frame = video_capture.read()
 
-    #small_frame = cv2.resize(frame, (0,0), fx=0.25, fy=0.25)
-
     # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
     frame2 = frame[:, :, ::-1]
     frame3 = cv2.resize(frame2, (900,900), fx=5, fy=5)
-    # frame3 = cv2.cvtColor(frame4, cv2.COLOR_BGR2GRAY)
 
     # Find all the faces and face enqcodings in the frame of video
     face_locations = face_recognition.face_locations(frame3)
@@ -117,8 +119,6 @@ def get_vip():
     for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
         # See if the face is a match for the known face(s)
         matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-
-        name = "Unknown"
 
         # Or instead, use the known face with the smallest distance to the new face
         face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
@@ -131,25 +131,40 @@ def get_vip():
     cv2.destroyAllWindows()
 
     # return name
-    return name
+    params["vip"] = name
 
 
+def run_vip_processor():
+    while(True):
+        get_vip()
 
+def run_junction_processor():
+    while(True):
+        get_junction()
 
-async def on_message(websocket, path):
-    mouse_name = await websocket.recv()
-    print()
-    print(f"[Processing {mouse_name} junction]")
-    print()
-    params = get_junction()
-    # params["vip"] = get_vip()
-    #params = get_camera_data()
-    print()
-    await websocket.send(json.dumps(params))
+def run_socket_server():
+    async def on_message(websocket, path):
+        mouse_name = await websocket.recv()
+        print()
+        print(f"[Sending {mouse_name} junction]")
+        print()
+        await websocket.send(json.dumps(params))
 
-start_server = websockets.serve(on_message, "localhost", 9000)
+    start_server = websockets.serve(on_message, "localhost", 9000)
 
-print("started on port 9000")
+    print("started on port 9000")
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
+
+vip_thread = threading.Thread(target=run_vip_processor)
+junction_thread = threading.Thread(target=run_junction_processor)
+socket_thread = threading.Thread(target=run_socket_server)
+
+vip_thread.setDaemon(True)
+junction_thread.setDaemon(True)
+socket_thread.setDaemon(True)
+
+vip_thread.start()
+junction_thread.start()
+socket_thread.start()
