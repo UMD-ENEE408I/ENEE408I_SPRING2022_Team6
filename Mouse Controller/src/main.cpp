@@ -454,7 +454,7 @@ void PIDForward(float distance, Encoder &encL, Encoder &encR) {
     Serial.print("Error: "); Serial.print(line_error); Serial.println();
     float adjust_vel = kP_line * line_error;
     Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
-    if(line_error == 0 || bit_buf[7] == 1) {  //on track, reset
+    if(line_error == 0 || emptyCheck < 3) {  //on track, reset
       targetVel_L = 10;
       targetVel_R = 10;
     }
@@ -704,18 +704,18 @@ void setup() {
       Kp_L = 1.86;
       Ki_L = 0.5;
       Kd_L = 0.1;
-      dist_adjust = 0;
+      dist_adjust = -0.2;
       break;
 
     case 2:
       Kp_R = 0.96;
       Ki_R = 1;
-      Kd_R = 0.25;
+      Kd_R = 0.1;
 
       Kp_L = 1.62;
       Ki_L = 1;
-      Kd_L = 0.25;
-      dist_adjust = -1.3;
+      Kd_L = 0.1;
+      dist_adjust = -0.5;
       break;
 
     case 3:
