@@ -15,7 +15,8 @@
 
 #define CENTER_ON_NODE_DISTANCE 11 //cm
 #define STRAIGHT_DISTANCE 15 - CENTER_ON_NODE_DISTANCE //cm
-#define CURVE_DISTANCE 15*TWO_PI/4 - CENTER_ON_NODE_DISTANCE //cm
+#define CURVE_DISTANCE 7.5 + 10*12*PI/4 + 5 - CENTER_ON_NODE_DISTANCE //cm
+#define CURVE_BACK_DISTANCE 2.5 //cm
 
 int mouse = 3;  //select which mouse is running
 
@@ -332,7 +333,7 @@ void rotateRight(int deg, Encoder &encL, Encoder &encR) {
 
 
 
-/* BEGIN Forward Movement *************************************/
+/* BEGIN Linear Movement *************************************/
 
 void senseLine(int *bit_buf) {
   int adc_buf[14];
@@ -355,7 +356,7 @@ void senseLine(int *bit_buf) {
   }
 }
 
-void PIDForward(int distance, Encoder &encL, Encoder &encR) {
+void PIDForward(float distance, Encoder &encL, Encoder &encR) {
   /*PID Control*/
   float targetVel_L = 10;  //in cm/s
   float targetVel_R = 10;  //in cm/s
@@ -377,15 +378,15 @@ void PIDForward(int distance, Encoder &encL, Encoder &encR) {
   int prevPos_L = 0;  //get start position
   int prevPos_R = 0;  //get start position
   long prevTime = micros();  //get start time in us
-  finalPos_L = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L - dist_adjust; //convert desired distance to encoder value
-  finalPos_R = distance/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R - dist_adjust; //convert desired distance to encoder value
+  finalPos_L = (distance + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L; //convert desired distance to encoder value
+  finalPos_R = (distance + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R; //convert desired distance to encoder value
   encL.write(0); encR.write(0); //clear encoders
   delay(10);
 
   while (1) {
     long currentTime = micros(); //time in us
-    int currentPos_L = encL.read(); //actually right
-    int currentPos_R = -encR.read(); // actually left
+    int currentPos_L = encL.read();
+    int currentPos_R = -encR.read(); 
     float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
 
     //calculate desired position (ticks)
@@ -477,7 +478,98 @@ void PIDForward(int distance, Encoder &encL, Encoder &encR) {
   }
 }
 
-/* END Forward Movement *************************************/
+void PIDBackward(float distance, Encoder &encL, Encoder &encR) {
+  /*PID Control*/
+  float targetVel_L = -10;  //in cm/s
+  float targetVel_R = -10;  //in cm/s
+  float targetPos_L = 0;
+  float targetPos_R = 0;
+  float finalPos_L = 0; //desired endpoint in encoder ticks
+  float finalPos_R = 0; //desired endpoint in encoder ticks
+
+  float currentError_L = 0;
+  float integral_L = 0;
+  float derivative_L = 0;
+  float prevError_L = 0;
+
+  float currentError_R = 0;
+  float integral_R = 0;
+  float derivative_R = 0;
+  float prevError_R = 0;
+
+  int prevPos_L = 0;  //get start position
+  int prevPos_R = 0;  //get start position
+  long prevTime = micros();  //get start time in us
+  finalPos_L = -1 * ((distance + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_L); //convert desired distance to encoder value
+  finalPos_R = -1 * ((distance + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION + prevPos_R); //convert desired distance to encoder value
+  encL.write(0); encR.write(0); //clear encoders
+  delay(10);
+
+  while (1) {
+    long currentTime = micros(); //time in us
+    int currentPos_L = encL.read(); 
+    int currentPos_R = -encR.read();
+    float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
+
+    //calculate desired position (ticks)
+    float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+    float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+
+    //increment target position
+    targetPos_L = targetPos_L + deltaPos_L; //subtracts delta position for backwards movement
+    targetPos_R = targetPos_R + deltaPos_R;
+
+    //calculate control values
+    currentError_L = currentPos_L - targetPos_L;
+    integral_L = integral_L + currentError_L*deltaTime;
+    derivative_L = (currentError_L - prevError_L)/deltaTime;
+
+    currentError_R = currentPos_R - targetPos_R;
+    integral_R = integral_R + currentError_R*deltaTime;
+    derivative_R = (currentError_R - prevError_R)/deltaTime;
+
+    float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
+    float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
+
+    //update variables
+    prevTime = currentTime;
+    prevPos_L = currentPos_L;
+    prevPos_R = currentPos_R;
+    prevError_L = currentError_L;
+    prevError_R = currentError_R;
+    
+    //set motor power
+    if (u_L > MAX_PWM_VALUE) { //if too large, cap
+      u_L = MAX_PWM_VALUE;
+    }
+    else if (u_L <= 0) {
+      u_L = 0;
+    }
+
+    //set motor power
+    if (u_R > MAX_PWM_VALUE) { //if too large, cap
+      u_R = MAX_PWM_VALUE;
+    }
+    else if (u_R <= 0) {
+      u_R = 0;
+    }
+
+    //drive motors
+    M_RIGHT_backward(u_R); 
+    M_LEFT_backward(u_L);  
+    
+    currentPos_L = encL.read(); 
+    currentPos_R = -encR.read(); 
+    if (currentPos_R <= finalPos_R || currentPos_L <= finalPos_L) {
+      stopMove();
+      return;
+    }
+    delay(10);
+  }
+}
+
+
+/* END Linear Movement *************************************/
 
 
 
@@ -486,11 +578,20 @@ void PIDForward(int distance, Encoder &encL, Encoder &encR) {
 
 void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
   switch (instruction) {
-    case 'L': rotateLeft(90, encL, encR); break;
-    case 'R': rotateRight(90, encL, encR); break;
+    case 'L':
+      rotateLeft(88, encL, encR);
+      PIDForward(2, encL, encR);
+      break;
+    case 'R':
+      rotateRight(88, encL, encR);
+      PIDForward(2, encL, encR);
+      break;
     case 'B': rotateRight(180, encL, encR); break;
     case 'F': PIDForward(STRAIGHT_DISTANCE, encL, encR); break;
-    case 'C': PIDForward(CURVE_DISTANCE, encL, encR); break;
+    case 'C':
+      PIDForward(CURVE_DISTANCE, encL, encR); 
+      PIDBackward(CURVE_BACK_DISTANCE, encL, encR);
+      break;
     case 'Y': 
       ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
       delay(150);
@@ -596,7 +697,6 @@ void setup() {
   //switch to select mouse
   switch (mouse) {
     case 1: 
-      dist_adjust = 0;
       Kp_R = 1.02;
       Ki_R = 0.8;
       Kd_R = 0.1;
@@ -604,6 +704,7 @@ void setup() {
       Kp_L = 1.86;
       Ki_L = 0.5;
       Kd_L = 0.1;
+      dist_adjust = 0;
       break;
 
     case 2:
@@ -614,7 +715,7 @@ void setup() {
       Kp_L = 1.62;
       Ki_L = 1;
       Kd_L = 0.25;
-      dist_adjust = 1.3;
+      dist_adjust = -1.3;
       break;
 
     case 3:
@@ -625,7 +726,7 @@ void setup() {
       Kp_L = 1.62;
       Ki_L = 1.2;
       Kd_L = 0.1;
-      dist_adjust = 0;
+      dist_adjust = -0.3;
       break;
 
     default: 
@@ -716,4 +817,5 @@ void loop() {
   while(true) {
     webSocket.loop();
   }
+
 }
