@@ -682,7 +682,7 @@ void loop() {
 
         String instructions = String((char *)payload);
 
-        if (instructions[0]) != 'Y' && instructions[0]) != 'N' && instructions[0]) != 'S') {
+        if (instructions[0] != 'Y' && instructions[0] != 'N' && instructions[0] != 'S') {
           PIDForward(CENTER_ON_NODE_DISTANCE, encL, encR); // move up to the node
         }
 
