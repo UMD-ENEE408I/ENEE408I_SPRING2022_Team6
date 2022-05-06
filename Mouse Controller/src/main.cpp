@@ -86,6 +86,8 @@ float Ki_L = 0;
 float Kd_L = 0;
 
 int bit_buf[14]; //Reflectance Sensor Array
+int leftSensors = 0;
+int rightSensors = 0;
 int emptyCheck = 0;
 
 float kP_line = 0.03;
@@ -377,6 +379,9 @@ void rotateRight(int deg, Encoder &encL, Encoder &encR) {
 /* BEGIN Linear Movement *************************************/
 
 void senseLine(int *bit_buf) {
+  leftSensors = 0;
+  rightSensors = 0;
+  emptyCheck = 0;
   int adc_buf[14];
   //read line sensor values, indices correspond to numbered sensors on the mouse
   for (int i = 0, j = 1; i < 8; i++) {
@@ -389,6 +394,12 @@ void senseLine(int *bit_buf) {
   for (int i = 1; i < 14; i++) {
     if(adc_buf[i] < THRESHOLD) { //below threshold, white line
       bit_buf[i] = 1;
+      if(i > 7) {
+        leftSensors++;
+      }
+      else if (i < 7) {
+        rightSensors++;
+      }
     }
     else {
       bit_buf[i] = 0;
@@ -982,7 +993,7 @@ void loop() {
           yPosition = yPosition + ((1/2) * yAcc * timeElapsed * timeElapsed);*/
 
           //If mouse hits junction with left or right path and no instructions
-          if ((bit_buf[1] == 1 || bit_buf[13] == 1) && instructions.length() == 0) { //TODO: Fix conditional
+          if ((leftSensors > 5 || rightSensors > 5) && instructions.length() == 0) {
             stopMove();
             delay(10);
             PIDBackward(2.5, encL, encR);
@@ -991,7 +1002,7 @@ void loop() {
             break;
 
           //If mouse hits junction with left or right path and has instructions
-          } else if (bit_buf[1] == 1 || bit_buf[13] == 1) { //TODO: Fix conditional
+          } else if (leftSensors > 5 || rightSensors > 5) {
             instructionHandler(instructions[0],encL,encR);
             instructions.remove(0);
             emptyCheck = 0;
