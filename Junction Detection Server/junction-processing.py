@@ -64,14 +64,14 @@ def get_junction():
     is_end = False
     
     count = 0
-    num_samples = 10
+    num_samples = 5
     
     while(count < num_samples):
             
         ret, junction = video_capture.read()
         
         junction_gray = cv2.cvtColor(junction, cv2.COLOR_BGR2GRAY)
-        ret, thresh = cv2.threshold(junction_gray,210,255,cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(junction_gray,215,255,cv2.THRESH_BINARY)
         
         for match_test in match_tests:
             match_type, left, right, top, bottom = match_test
@@ -87,15 +87,18 @@ def get_junction():
         
             if (similarity > 0.9) and match_type == "end":
                 is_end = True
-                print(f"{match_type} ({similarity:.0%})")
             elif (similarity > 0.78):
                 paths[match_type] = True
-                print(f"{match_type} ({similarity:.0%})")
             
         count = count + 1
 
     params["paths"] = paths
     params["is_end"] = is_end
+
+    print("Paths: ", params["paths"])
+    print()
+    print("END?: ", params["is_end"])
+    print()
 
 
 
@@ -126,45 +129,44 @@ def get_vip():
         if matches[best_match_index]:
             name = known_face_names[best_match_index]
 
-    # Release handle to the webcam
-    video_capture.release()
-    cv2.destroyAllWindows()
-
     # return name
     params["vip"] = name
+
+    print("VIP: ", params["vip"])
+    print()
 
 
 def run_vip_processor():
     while(True):
+        print("Started VIP Processor")
+        print()
         get_vip()
 
 def run_junction_processor():
     while(True):
+        print("Started Junction Processor")
+        print()
         get_junction()
-
-def run_socket_server():
-    async def on_message(websocket, path):
-        mouse_name = await websocket.recv()
-        print()
-        print(f"[Sending {mouse_name} junction]")
-        print()
-        await websocket.send(json.dumps(params))
-
-    start_server = websockets.serve(on_message, "localhost", 9000)
-
-    print("started on port 9000")
-
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
 
 vip_thread = threading.Thread(target=run_vip_processor)
 junction_thread = threading.Thread(target=run_junction_processor)
-socket_thread = threading.Thread(target=run_socket_server)
 
 vip_thread.setDaemon(True)
 junction_thread.setDaemon(True)
-socket_thread.setDaemon(True)
 
 vip_thread.start()
 junction_thread.start()
-socket_thread.start()
+
+async def on_message(websocket, path):
+    mouse_name = await websocket.recv()
+    print()
+    print(f"[Sending {mouse_name} junction]")
+    print()
+    await websocket.send(json.dumps(params))
+
+start_server = websockets.serve(on_message, "localhost", 9000)
+
+print("Started Socket Server on port 9000")
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
