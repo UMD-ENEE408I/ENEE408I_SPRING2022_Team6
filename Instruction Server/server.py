@@ -597,10 +597,6 @@ class Maze:
 
         instruction = instruction_set[direction], direction[-1]
 
-        print()
-        print(instruction_set[direction])
-        print(direction[-1])
-
         if (facing == 'n' or facing == 's') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasEastWest():
                 instruction = 'F', direction[-1]
@@ -612,9 +608,11 @@ class Maze:
             else:
                 instruction = '', direction[-1]
         elif instruction_set[direction] == 'R':
-            instruction == 'R', direction[-1]
+            instruction = 'R', direction[-1]
         elif instruction_set[direction] == 'L':
-            instruction == 'L', direction[-1]
+            instruction = 'L', direction[-1]
+        
+        return instruction
 
 
     # Updates the display with the location of mice, VIPs and the end of the maze + the last instruction
