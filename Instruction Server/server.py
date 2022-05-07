@@ -630,9 +630,9 @@ class Maze:
 
         url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{self.instruction}"
         
-        with open(r'./Maze Display/data/data.txt', 'w') as file:
-            file.write(url)
-            file.close()
+        #with open(r'./Maze Display/data/data.txt', 'w') as file:
+        #    file.write(url)
+        #    file.close()
 
         return url
 
@@ -644,6 +644,7 @@ class Maze:
         print(f"Sending {self.instruction} to {self.mouse.name}")
         self.mouse_socket.send(self.instruction)
         mouse_data = self.mouse_socket.recv()
+        print(mouse_data)
         self.handleMouseData(mouse_data)
         self.serveNextInstruction(mouse_data[-1])
         return mouse_data
@@ -812,6 +813,9 @@ class Maze:
             self.stack.append(next_node)
             
             if is_neighbor:
+                print(self.mouse.facing)
+                print(node)
+                print(next_node)
                 instruction, facing = self.getSingleInstruction(self.mouse.facing, node, next_node)
             else:
                 instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
@@ -992,11 +996,11 @@ def initialize_demo():
 
     camera_ip_addr = input('Enter Camera IP Address: ')
 
-    mouse1 = Mouse('Mouse 1', mouse_one_ip_addr, 0, 0, 'n', mouse_one_vip)
-    mouse2 = Mouse('Mouse 2', mouse_two_ip_addr, 0, 0, 'n', mouse_two_vip)
-    mouse3 = Mouse('Mouse 3', mouse_three_ip_addr, 0, 0, 'n', mouse_three_vip)
+    mouse1 = Mouse('Mouse 1', '192.168.43.54', 0, 0, 'n', 'a')
+    mouse2 = Mouse('Mouse 2', 'a', 0, 0, 'n', 'a')
+    mouse3 = Mouse('Mouse 3', 'a', 0, 0, 'n', 'a')
 
-    maze = Maze(mouse1, mouse2, mouse3, camera_ip_addr)
+    maze = Maze(mouse1, mouse2, mouse3, '127.0.0.1:9000')
 
     print()
 
@@ -1005,7 +1009,7 @@ def run_demo():
     print("Starting Demo")
     global maze
     while not maze.is_complete:
-        maze.sendInstruction('')
+        maze.sendInstruction('E')
 
 initialize_demo()
 input("Press Enter to Start...")
