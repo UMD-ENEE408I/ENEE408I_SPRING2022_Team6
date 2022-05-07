@@ -845,13 +845,13 @@ void loop() {
         if (instructions == "E") {
           instructions == "";
         }
-        
+
         String path = "";
         int pathType = F_PATH;
         int orientation = 0;
         bool distanceReset = true;
 
-        PIDForward(NODE_READ_DISTANCE,encL,encR);
+        PIDForward(6,encL,encR);
 
         float timeElapsed = 0.0;
         float zVel = 0.0;
@@ -996,7 +996,9 @@ void loop() {
             emptyCheck = 0;
             distanceReset = true;
             zPosition = 0.0;
-            xPosition = 0.0;
+            encL.write(0);
+            encR.write(0);
+            
           
           //If mouse hits dead end
           } else if (emptyCheck == 13) {
@@ -1064,10 +1066,16 @@ void loop() {
               Serial.println("F instruction");
               distanceReset = false;
             } else if (!distanceReset && pathType == F_PATH && xPosition > STRAIGHT_DISTANCE) {
-              xPosition = xPosition - 15.0;
+              Serial.println("Reset distance");
+              float xPositionTicks = (((xPosition - STRAIGHT_DISTANCE) + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION);
+              encL.write(xPositionTicks);
+              encR.write(xPositionTicks);
               distanceReset = true;
             } else if (!distanceReset && pathType != F_PATH && xPosition > CURVE_DISTANCE) {
-              xPosition = xPosition - (15.0*2.0*PI/4.0);
+              Serial.println("Reset distance");
+              float xPositionTicks = (((xPosition - STRAIGHT_DISTANCE) + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION);
+              encL.write(xPositionTicks);
+              encR.write(xPositionTicks);
               distanceReset = true;
             }
 
