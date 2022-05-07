@@ -661,8 +661,8 @@ class Maze:
             elif (instruction == 'R'): path_data_set = PATH_DATA_SETS[facing]['forward to right']
             else: return
             
-            next_x = node + path_data_set['x']
-            next_y = node + path_data_set['y']
+            next_x = node.x + path_data_set['x']
+            next_y = node.y + path_data_set['y']
 
             if (next_x, next_y) not in self.nodes:
                 next_node = Node(next_x, next_y)
@@ -982,7 +982,7 @@ def initialize_demo():
 
     print()
 
-    mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
+    """mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
     print(f"Mouse One VIP: {mouse_one_vip}")
     print(f"Mouse Two VIP: {mouse_two_vip}")
     print(f"Mouse Three VIP: {mouse_three_vip}")
@@ -994,7 +994,7 @@ def initialize_demo():
     print(f"Mouse Three IP Address: {mouse_three_ip_addr}")
     print()
 
-    camera_ip_addr = input('Enter Camera IP Address: ')
+    camera_ip_addr = input('Enter Camera IP Address: ')"""
 
     mouse1 = Mouse('Mouse 1', '192.168.43.54', 0, 0, 'n', 'a')
     mouse2 = Mouse('Mouse 2', 'a', 0, 0, 'n', 'a')
