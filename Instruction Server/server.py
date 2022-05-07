@@ -272,56 +272,56 @@ PATH_DATA_SETS = {
 INSTRUCTION_SETS = {
     'n': {
         'n': 'F',
-        'e': 'RF',
-        's': 'BF',
-        'w': 'LF',
-        'ne': 'C',
-        'en': 'RC',
-        'se': 'BC',
-        'es': 'RC',
-        'sw': 'BC',
-        'ws': 'LC',
-        'nw': 'C',
-        'wn': 'LC'
+        'e': 'R',
+        's': 'B',
+        'w': 'L',
+        'ne': 'F',
+        'en': 'R',
+        'se': 'B',
+        'es': 'R',
+        'sw': 'B',
+        'ws': 'L',
+        'nw': 'F',
+        'wn': 'L'
     }, 'e': {
-        'n': 'LF',
+        'n': 'L',
         'e': 'F',
-        's': 'RF',
-        'w': 'BF',
-        'ne': 'LC',
-        'en': 'C',
-        'se': 'RC',
-        'es': 'C',
-        'sw': 'RC',
-        'ws': 'BC',
-        'nw': 'LC',
-        'wn': 'BC'
+        's': 'R',
+        'w': 'B',
+        'ne': 'L',
+        'en': 'F',
+        'se': 'R',
+        'es': 'F',
+        'sw': 'R',
+        'ws': 'B',
+        'nw': 'L',
+        'wn': 'B'
     }, 's': {
-        'n': 'BF',
-        'e': 'LF',
+        'n': 'B',
+        'e': 'L',
         's': 'F',
-        'w': 'RF',
-        'ne': 'BC',
-        'en': 'LC',
-        'se': 'C',
-        'es': 'LC',
-        'sw': 'C',
-        'ws': 'RC',
-        'nw': 'BC',
-        'wn': 'RC'
+        'w': 'R',
+        'ne': 'B',
+        'en': 'L',
+        'se': 'F',
+        'es': 'L',
+        'sw': 'F',
+        'ws': 'R',
+        'nw': 'B',
+        'wn': 'R'
     }, 'w': {
-        'n': 'RF',
-        'e': 'BF',
-        's': 'LF',
+        'n': 'R',
+        'e': 'B',
+        's': 'L',
         'w': 'F',
-        'ne': 'RC',
-        'en': 'BC',
-        'se': 'LC',
-        'es': 'BC',
-        'sw': 'LC',
-        'ws': 'C',
-        'nw': 'RC',
-        'wn': 'C'
+        'ne': 'R',
+        'en': 'B',
+        'se': 'L',
+        'es': 'B',
+        'sw': 'L',
+        'ws': 'F',
+        'nw': 'R',
+        'wn': 'F'
     }
 }
 
@@ -597,20 +597,24 @@ class Maze:
 
         instruction = instruction_set[direction], direction[-1]
 
-        if (facing == 'n' or facing == 's') and (instruction[0] == 'F' or instruction[0] == 'C'):
+        print()
+        print(instruction_set[direction])
+        print(direction[-1])
+
+        if (facing == 'n' or facing == 's') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasEastWest():
-                instruction = 'F'
+                instruction = 'F', direction[-1]
             else:
-                instruction = ''
-        elif (facing == 'e' or facing == 'w') and (instruction[0] == 'F' or instruction[0] == 'C'):
+                instruction = '', direction[-1]
+        elif (facing == 'e' or facing == 'w') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasNorthSouth():
-                instruction = 'F'
+                instruction = 'F', direction[-1]
             else:
-                instruction = ''
-        elif instruction[0] == 'R':
-            instruction == 'R'
-        elif instruction[0] == 'L':
-            instruction == 'L'
+                instruction = '', direction[-1]
+        elif instruction_set[direction] == 'R':
+            instruction == 'R', direction[-1]
+        elif instruction_set[direction] == 'L':
+            instruction == 'L', direction[-1]
 
 
     # Updates the display with the location of mice, VIPs and the end of the maze + the last instruction
