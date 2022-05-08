@@ -582,7 +582,7 @@ class Maze:
         self.prev_x = 0
         self.prev_y = 0
         self.prev_facing = 'n'
-        """self.camera_ip_addr = camera_ip_addr
+        self.camera_ip_addr = camera_ip_addr
         self.camera_socket = websocket.WebSocket()
         self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
         print(f"[Connected to Junction Processor]")
@@ -590,7 +590,7 @@ class Maze:
         self.mouse_socket = websocket.WebSocket()
         self.mouse_socket.connect(f"ws://{self.mouse.ip}")
         print(f"[Connected to {self.mouse.name}]")
-        print()"""
+        print()
 
 
     # Breadth-first search from one node to another
@@ -624,23 +624,25 @@ class Maze:
         
         instruction = ''
         display = ''
+        instruction_facing = facing
 
         for i in range(len(path) - 1):
-            next_instruction, next_facing, next_display = self.getSingleInstruction(facing, path[i], path[i + 1])
+            next_instruction, next_facing, instruction_facing, next_display = self.getSingleInstruction(facing, instruction_facing, path[i], path[i + 1])
             instruction = instruction + next_instruction
             facing = next_facing
             display = display + next_display
 
-        return instruction, facing, display
+        return instruction, instruction_facing, display
 
 
     # Gets single path from one node to another
     # Returns tuple of the single instruction and the direction the mouse will be facing after taking the path
-    def getSingleInstruction(self, facing, node, next_node):
+    def getSingleInstruction(self, facing, instruction_facing, node, next_node):
         instruction_set = INSTRUCTION_SETS[facing]
         display_instruction_set = DISPLAY_INSTRUCTION_SETS[facing]
         offset = (next_node.x - node.x, next_node.y - node.y)
         direction = ''
+        if instruction_facing == '': instruction_facing = facing
         
         if offset == (0,1): direction = 'n'
         elif offset == (1,0): direction = 'e'
@@ -657,22 +659,22 @@ class Maze:
 
         if (facing == 'n' or facing == 's') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasEastWest():
-                instruction = 'F', facing, display_instruction_set[direction]
+                instruction = 'F', direction[-1], instruction_facing, display_instruction_set[direction]
             else:
-                instruction = '', facing, display_instruction_set[direction]
+                instruction = '', direction[-1], instruction_facing, display_instruction_set[direction]
         elif (facing == 'e' or facing == 'w') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasNorthSouth():
-                instruction = 'F', facing, display_instruction_set[direction]
+                instruction = 'F', direction[-1], instruction_facing, display_instruction_set[direction]
             else:
-                instruction = '', facing, display_instruction_set[direction]
+                instruction = '', direction[-1], instruction_facing, display_instruction_set[direction]
         elif instruction_set[direction] == 'R':
-            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
+            instruction = instruction_set[direction], direction[-1], direction[0], display_instruction_set[direction]
         elif instruction_set[direction] == 'L':
-            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
+            instruction = instruction_set[direction], direction[-1], direction[0], display_instruction_set[direction]
         elif instruction_set[direction] == 'B':
-            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
+            instruction = instruction_set[direction], direction[-1], direction[0], display_instruction_set[direction]
         else:
-            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
+            instruction = instruction_set[direction], direction[-1], direction[0], display_instruction_set[direction]
         
         return instruction
 
@@ -710,6 +712,7 @@ class Maze:
         print(f"Sending {self.instruction} to {self.mouse.name}")
         self.mouse_socket.send(self.instruction)
         mouse_data = self.mouse_socket.recv()
+        mouse_data = input('Mouse data: ')
         print('Mouse Data: ', mouse_data)
         self.handleMouseData(mouse_data)
         self.serveNextInstruction()
@@ -876,8 +879,8 @@ class Maze:
             print('Next ', next_node.x, next_node.y)
             
             if is_neighbor:
-                instruction, facing, display = self.getSingleInstruction(self.mouse.facing, node, next_node)
-                self.mouse.setLocation(node.x,node.y,facing)
+                instruction, facing, instruction_facing, display = self.getSingleInstruction(self.mouse.facing, '', node, next_node)
+                self.mouse.setLocation(node.x,node.y,instruction_facing)
             else:
                 instruction, facing, display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
                 self.mouse.setLocation(temp_node.x,temp_node.y,facing)
@@ -994,8 +997,8 @@ class Maze:
             print('Next ', next_node.x, next_node.y)
             
             if is_neighbor:
-                instruction, facing, display = self.getSingleInstruction(self.mouse.facing, node, next_node)
-                self.mouse.setLocation(node.x,node.y,facing)
+                instruction, facing, instruction_facing, display = self.getSingleInstruction(self.mouse.facing, '', node, next_node)
+                self.mouse.setLocation(node.x,node.y,instruction_facing)
             else:
                 instruction, facing, display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
                 self.mouse.setLocation(temp_node.x,temp_node.y,facing)
@@ -1123,8 +1126,8 @@ def run_demo():
     print("Starting Demo")
     global maze
     while not maze.is_complete:
-        maze.sendDisplayData('E')
-        maze.sendInstruction('E')
+        maze.sendDisplayData('')
+        maze.sendInstruction('Y')
 
 initialize_demo()
 input("Press Enter to Start...")

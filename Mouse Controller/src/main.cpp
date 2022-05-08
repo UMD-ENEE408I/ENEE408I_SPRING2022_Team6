@@ -983,10 +983,14 @@ void loop() {
             //If mouse hits junction with left or right path and has instructions
             } else if (leftSensors > 3 || rightSensors > 3) {
               //Serial.println("Junction w/ Inst");
+              stopMove();
               char instruction = instructions[0];
               instructionHandler(instruction,encL,encR);
               instructions.remove(0);
               emptyCheck = 0;
+              if ((instruction == 'Y' || instruction == 'N' || instruction == 'S') && instructions.length == 0) {
+                endFlag = true;
+              }
               break;
               //TODO: Instruction handling resets encoders w/o breaking
             
