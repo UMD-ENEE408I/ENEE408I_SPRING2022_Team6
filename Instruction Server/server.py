@@ -1,3 +1,4 @@
+from numpy import disp
 import websocket
 import json
 
@@ -325,8 +326,63 @@ INSTRUCTION_SETS = {
     }
 }
 
-PORT = 8000
+DISPLAY_INSTRUCTION_SETS = {
+    'n': {
+        'n': 'F',
+        'e': 'RF',
+        's': 'BF',
+        'w': 'LF',
+        'ne': 'C',
+        'en': 'RC',
+        'se': 'BC',
+        'es': 'RC',
+        'sw': 'BC',
+        'ws': 'LC',
+        'nw': 'C',
+        'wn': 'LC'
+    }, 'e': {
+        'n': 'LF',
+        'e': 'F',
+        's': 'RF',
+        'w': 'BF',
+        'ne': 'LC',
+        'en': 'C',
+        'se': 'RC',
+        'es': 'C',
+        'sw': 'RC',
+        'ws': 'BC',
+        'nw': 'LC',
+        'wn': 'BC'
+    }, 's': {
+        'n': 'BF',
+        'e': 'LF',
+        's': 'F',
+        'w': 'RF',
+        'ne': 'BC',
+        'en': 'LC',
+        'se': 'C',
+        'es': 'LC',
+        'sw': 'C',
+        'ws': 'RC',
+        'nw': 'BC',
+        'wn': 'RC'
+    }, 'w': {
+        'n': 'RF',
+        'e': 'BF',
+        's': 'LF',
+        'w': 'F',
+        'ne': 'RC',
+        'en': 'BC',
+        'se': 'LC',
+        'es': 'BC',
+        'sw': 'LC',
+        'ws': 'C',
+        'nw': 'RC',
+        'wn': 'C'
+    }
+}
 
+PORT = 8000
 
 
 
@@ -508,7 +564,7 @@ class Node:
 
 
 class Maze:
-
+    #TODO: Skip some of these excess scans
     def __init__(self, mouse1, mouse2, mouse3, camera_ip_addr):
         self.nodes = {}
         self.nodes[(0,0)] = Node(0,0)
@@ -522,10 +578,11 @@ class Maze:
         self.mouse3 = mouse3
         self.is_complete = False
         self.instruction = ''
+        self.display_instruction = ''
         self.prev_x = 0
         self.prev_y = 0
         self.prev_facing = 'n'
-        self.camera_ip_addr = camera_ip_addr
+        """self.camera_ip_addr = camera_ip_addr
         self.camera_socket = websocket.WebSocket()
         self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
         print(f"[Connected to Junction Processor]")
@@ -533,7 +590,7 @@ class Maze:
         self.mouse_socket = websocket.WebSocket()
         self.mouse_socket.connect(f"ws://{self.mouse.ip}")
         print(f"[Connected to {self.mouse.name}]")
-        print()
+        print()"""
 
 
     # Breadth-first search from one node to another
@@ -566,19 +623,22 @@ class Maze:
             path.insert(0, curr)
         
         instruction = ''
+        display = ''
 
         for i in range(len(path) - 1):
-            next_instruction, next_facing = self.getSingleInstruction(facing, path[i], path[i + 1])
+            next_instruction, next_facing, next_display = self.getSingleInstruction(facing, path[i], path[i + 1])
             instruction = instruction + next_instruction
             facing = next_facing
+            display = display + next_display
 
-        return instruction, facing
+        return instruction, facing, display
 
 
     # Gets single path from one node to another
     # Returns tuple of the single instruction and the direction the mouse will be facing after taking the path
     def getSingleInstruction(self, facing, node, next_node):
         instruction_set = INSTRUCTION_SETS[facing]
+        display_instruction_set = DISPLAY_INSTRUCTION_SETS[facing]
         offset = (next_node.x - node.x, next_node.y - node.y)
         direction = ''
         
@@ -595,29 +655,33 @@ class Maze:
         elif offset == (-1,1) and node.directions['nw']: direction = 'nw'
         elif offset == (-1,1) and node.directions['wn']: direction = 'wn'
 
-        instruction = instruction_set[direction], direction[-1]
-
         if (facing == 'n' or facing == 's') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasEastWest():
-                instruction = 'F', direction[-1]
+                instruction = 'F', facing, display_instruction_set[direction]
             else:
-                instruction = '', direction[-1]
+                instruction = '', facing, display_instruction_set[direction]
         elif (facing == 'e' or facing == 'w') and (instruction_set[direction] == 'F' or instruction_set[direction] == 'C'):
             if node.hasNorthSouth():
-                instruction = 'F', direction[-1]
+                instruction = 'F', facing, display_instruction_set[direction]
             else:
-                instruction = '', direction[-1]
+                instruction = '', facing, display_instruction_set[direction]
         elif instruction_set[direction] == 'R':
-            instruction = 'R', direction[-1]
+            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
         elif instruction_set[direction] == 'L':
-            instruction = 'L', direction[-1]
+            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
+        elif instruction_set[direction] == 'B':
+            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
+        else:
+            instruction = instruction_set[direction], direction[-1], display_instruction_set[direction]
         
         return instruction
 
 
     # Updates the display with the location of mice, VIPs and the end of the maze + the last instruction
     # Returns the "url" containing the data sent to the display
-    def sendDisplayData(self):
+    def sendDisplayData(self, display_instruction):
+        print('Updating display')
+
         url = f"?{self.mouse1.getDisplay()}&{self.mouse2.getDisplay()}&{self.mouse3.getDisplay()}"
 
         for v in self.vips:
@@ -630,11 +694,11 @@ class Maze:
         for n in self.nodes:
             url = f"{url}&{self.nodes[n].getDisplay()}"
 
-        url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{self.instruction}"
+        url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{display_instruction}"
         
-        #with open(r'./Maze Display/data/data.txt', 'w') as file:
-        #    file.write(url)
-        #    file.close()
+        with open(r'./Maze Display/data/data.txt', 'w') as file:
+            file.write(url)
+            file.close()
 
         return url
 
@@ -646,28 +710,35 @@ class Maze:
         print(f"Sending {self.instruction} to {self.mouse.name}")
         self.mouse_socket.send(self.instruction)
         mouse_data = self.mouse_socket.recv()
-        print(mouse_data)
+        print('Mouse Data: ', mouse_data)
         self.handleMouseData(mouse_data)
-        self.serveNextInstruction(mouse_data[-1])
+        self.serveNextInstruction()
         return mouse_data
 
     
     # Creates paths and sets mouse location at current dead end or junction
     def handleMouseData(self, mouse_data):
+        if (self.mouse.x, self.mouse.y) not in self.nodes:
+            node = Node(self.mouse.x, self.mouse.y)
+            self.nodes[(self.mouse.x, self.mouse.y)] = node
+            
         node = self.nodes[(self.mouse.x, self.mouse.y)]
+        node.visited = True
+
         facing = self.mouse.facing
 
         for instruction in mouse_data:
             if (instruction == 'F'): path_data_set = PATH_DATA_SETS[facing]['forward']
             elif (instruction == 'L'): path_data_set = PATH_DATA_SETS[facing]['forward to left']
             elif (instruction == 'R'): path_data_set = PATH_DATA_SETS[facing]['forward to right']
-            else: return
+            else: break
             
             next_x = node.x + path_data_set['x']
             next_y = node.y + path_data_set['y']
 
             if (next_x, next_y) not in self.nodes:
                 next_node = Node(next_x, next_y)
+                next_node.visited = True
                 self.nodes[(next_x, next_y)] = next_node
 
             next_node = self.nodes[(next_x,next_y)]
@@ -681,29 +752,14 @@ class Maze:
         
         self.mouse.setLocation(node.x, node.y, facing)
 
+        print(node.x, node.y, facing)
+
         return
 
 
     # Get available paths, VIP name if present, and whether or not the current node is the end of the maze from the camera via GET request to the camera server's IP address for current mouse to get 
     # Returns the request's response object
-    def getJunctionData(self, type):
-        if(type == 'D'):
-            return {
-                "paths": {
-                    "forward": False,
-                    "left": False,
-                    "right": False,
-                    "forward to left": False,
-                    "forward to right": False,
-                    "left to forward": False,
-                    "right to forward": False,
-                    "left to backward": False,
-                    "right to backward": False
-                },
-                "is_end": False,
-                "vip": ""
-            }
-        
+    def getJunctionData(self):
         print()
         print(f"[Requesting junction data]")
         print()
@@ -716,10 +772,7 @@ class Maze:
 
     # Calculates and sends the next instruction for the current mouse
     # Returns the request's response object
-    def serveNextInstruction(self, type):
-
-        # Update the display
-        self.sendDisplayData()
+    def serveNextInstruction(self):
 
         # Store previous mouse location
         self.prev_x = self.mouse.x
@@ -743,8 +796,10 @@ class Maze:
             node = self.nodes[(self.mouse.x, self.mouse.y)]
             node.visited = True
 
+            print(node.x,node.y,node.visited)
 
-            camera_data = self.getJunctionData(type)
+
+            camera_data = self.getJunctionData()
 
 
             vip = camera_data['vip']
@@ -759,15 +814,18 @@ class Maze:
 
                 if self.mouse.vip == vip and self.end is None:
                     self.mouse.state = 'Searching for end'
+                    self.sendDisplayData(f"Y")
                     return self.sendInstruction(f"Y")
                     
                 elif self.mouse.vip == vip and not self.end is None:
                     self.mouse.state = 'Traveling to end'
-                    instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, self.end['x'], self.end['y'])
-                    self.mouse.setLocation(self.end['x'], self.end['y'], facing)
+                    instruction, facing, display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, self.end['x'], self.end['y'])
+                    self.mouse.facing = facing
+                    self.sendDisplayData(f"Y{display}")
                     return self.sendInstruction(f"Y{instruction}")
                 
                 else:
+                    self.sendDisplayData(f"N")
                     return self.sendInstruction(f"N")
 
 
@@ -776,6 +834,7 @@ class Maze:
                     'x': self.mouse.x, 
                     'y': self.mouse.y
                 }
+                self.sendDisplayData(f"Y")
                 return self.sendInstruction(f"Y")
 
 
@@ -805,6 +864,7 @@ class Maze:
 
             while len(unvisited_neighbors) == 0:
                 temp_node = self.stack.pop()
+                print('Popped ', temp_node.x, temp_node.y)
                 unvisited_neighbors = temp_node.getUnvisitedNeighbors(self)
 
                 if (len(unvisited_neighbors) > 1):
@@ -812,17 +872,17 @@ class Maze:
             
             next_node = unvisited_neighbors[0]['node']
             next_node.visited = True
-            self.stack.append(next_node)
+            self.stack.append(node)
+            print('Next ', next_node.x, next_node.y)
             
             if is_neighbor:
-                print(self.mouse.facing)
-                print(node)
-                print(next_node)
-                instruction, facing = self.getSingleInstruction(self.mouse.facing, node, next_node)
+                instruction, facing, display = self.getSingleInstruction(self.mouse.facing, node, next_node)
+                self.mouse.setLocation(node.x,node.y,facing)
             else:
-                instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
+                instruction, facing, display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
+                self.mouse.setLocation(temp_node.x,temp_node.y,facing)
             
-            self.mouse.setLocation(next_node.x, next_node.y, facing)
+            self.sendDisplayData(display)
             return self.sendInstruction(instruction)
 
 
@@ -838,8 +898,9 @@ class Maze:
                 vip = self.vips[self.mouse.vip]
 
                 # Get path to the mouse's VIP and send instruction
-                instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, vip['x'], vip['y'])
-                self.mouse.setLocation(self.end['x'], self.end['y'], facing)
+                instruction, facing, display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, vip['x'], vip['y'])
+                self.mouse.setLocation(vip['x'], vip['y'], facing)
+                self.sendDisplayData(f"{display}Y")
                 return self.sendInstruction(f"{instruction}Y")
             
             # If the end has been found, the mouse travels to their vip and then travels to the end
@@ -848,9 +909,10 @@ class Maze:
                 vip = self.vips[self.mouse.vip]
 
                 # Get path to the mouse's VIP + the path from the mouse's VIP to the end and send instruction
-                vip_instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, vip['x'], vip['y'])
-                end_instruction, facing = self.bfs(facing, vip['x'], vip['y'], self.end['x'], self.end['y'])
+                vip_instruction, facing, vip_display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, vip['x'], vip['y'])
+                end_instruction, facing, end_display = self.bfs(facing, vip['x'], vip['y'], self.end['x'], self.end['y'])
                 self.mouse.setLocation(self.end['x'], self.end['y'], facing)
+                self.sendDisplayData(f"{vip_display}Y{end_display}")
                 return self.sendInstruction(f"{vip_instruction}Y{end_instruction}")
 
 
@@ -879,6 +941,7 @@ class Maze:
                     'y': self.mouse.y,
                     'name': vip
                 }
+                self.sendDisplayData(f"N")
                 return self.sendInstruction(f"N")
 
 
@@ -889,6 +952,7 @@ class Maze:
                 }
 
                 self.mouse.state = 'Traveling to end'
+                self.sendDisplayData(f"Y")
                 return self.sendInstruction(f"Y")
             
             
@@ -918,21 +982,25 @@ class Maze:
 
             while len(unvisited_neighbors) == 0:
                 temp_node = self.stack.pop()
+                print('Popped ', temp_node.x, temp_node.y)
                 unvisited_neighbors = temp_node.getUnvisitedNeighbors(self)
-                
+
                 if (len(unvisited_neighbors) > 1):
                     self.stack.append(temp_node)
             
             next_node = unvisited_neighbors[0]['node']
             next_node.visited = True
-            self.stack.append(next_node)
+            self.stack.append(node)
+            print('Next ', next_node.x, next_node.y)
             
             if is_neighbor:
-                instruction, facing = self.getSingleInstruction(self.mouse.facing, node, next_node)
+                instruction, facing, display = self.getSingleInstruction(self.mouse.facing, node, next_node)
+                self.mouse.setLocation(node.x,node.y,facing)
             else:
-                instruction, facing = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
+                instruction, facing, display = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, next_node.x, next_node.y)
+                self.mouse.setLocation(temp_node.x,temp_node.y,facing)
             
-            self.mouse.setLocation(next_node.x, next_node.y, facing)
+            self.sendDisplayData(display)
             return self.sendInstruction(instruction)
 
 
@@ -942,6 +1010,8 @@ class Maze:
 
         elif self.mouse.state == 'Traveling to end' and self.mouse.name == self.mouse1.name:
             self.mouse.state = 'Complete'
+            self.sendDisplayData(f"S")
+            self.sendInstruction(f"S")
             self.mouse = self.mouse2
             if self.mouse.vip in self.vips:
                 self.mouse.state = 'Traveling to VIP'
@@ -955,6 +1025,8 @@ class Maze:
         
         elif self.mouse.state == 'Traveling to end' and self.mouse.name == self.mouse2.name:
             self.mouse.state = 'Complete'
+            self.sendDisplayData(f"S")
+            self.sendInstruction(f"S")
             self.mouse = self.mouse3
             if self.mouse.vip in self.vips:
                 self.mouse.state = 'Traveling to VIP'
@@ -968,10 +1040,10 @@ class Maze:
         elif self.mouse.state == 'Traveling to end' and self.mouse.name == self.mouse3.name:
             self.mouse.state = 'Complete'
             self.is_complete = True
+            self.sendDisplayData(f"S")
             self.sendInstruction(f"S")
             self.camera_socket.close()
             self.mouse_socket.close()
-            self.sendDisplayData()
             print('Demo Complete!')
 
 
@@ -979,12 +1051,53 @@ class Maze:
 
 # Helper Functions
 
+def get_camera_data():
+    # Simulate HTTP GET Request to camera server
+    # responds with available paths, present vip, and if the node is the end
+
+    f = input('Forward? ')
+    l = input('Left? ')
+    r = input('Right? ')
+    fl = input('Forward to Left? ')
+    fr = input('Forward to Right? ')
+    lf = input('Left to Forward? ')
+    rf = input('Right to Forward? ')
+    lb = input('Left to Backward? ')
+    rb = input('Right to Backward? ')
+
+    vip = input('VIP? ')
+
+    if vip == '':
+        vip = None
+    
+    end = input('At the end? ')
+
+    paths =  {
+        'forward': f == 'y',
+        'left': l == 'y',
+        'right': r == 'y',
+        'forward to left': fl == 'y',
+        'forward to right': fr == 'y',
+        'left to forward': lf == 'y',
+        'right to forward': rf == 'y',
+        'left to backward': lb == 'y',
+        'right to backward': rb == 'y'
+    }
+
+    is_end = end == 'y'
+
+    return {
+        'paths': paths,
+        'vip': vip,
+        'is_end': is_end
+    }
+
 def initialize_demo():
     global maze
 
     print()
 
-    """mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
+    mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
     print(f"Mouse One VIP: {mouse_one_vip}")
     print(f"Mouse Two VIP: {mouse_two_vip}")
     print(f"Mouse Three VIP: {mouse_three_vip}")
@@ -996,21 +1109,21 @@ def initialize_demo():
     print(f"Mouse Three IP Address: {mouse_three_ip_addr}")
     print()
 
-    camera_ip_addr = input('Enter Camera IP Address: ')"""
+    camera_ip_addr = input('Enter Camera IP Address: ')
 
-    mouse1 = Mouse('Mouse 1', '192.168.43.54', 0, 0, 'n', 'a')
-    mouse2 = Mouse('Mouse 2', 'a', 0, 0, 'n', 'a')
-    mouse3 = Mouse('Mouse 3', 'a', 0, 0, 'n', 'a')
+    mouse1 = Mouse('Mouse 1', mouse_one_ip_addr, 0, 0, 'n', mouse_one_vip)
+    mouse2 = Mouse('Mouse 2', mouse_two_ip_addr, 0, 0, 'n', mouse_two_vip)
+    mouse3 = Mouse('Mouse 3', mouse_three_ip_addr, 0, 0, 'n', mouse_three_vip)
 
-    maze = Maze(mouse1, mouse2, mouse3, '127.0.0.1:9000')
+    maze = Maze(mouse1, mouse2, mouse3, camera_ip_addr)
 
     print()
-
 
 def run_demo():
     print("Starting Demo")
     global maze
     while not maze.is_complete:
+        maze.sendDisplayData('E')
         maze.sendInstruction('E')
 
 initialize_demo()

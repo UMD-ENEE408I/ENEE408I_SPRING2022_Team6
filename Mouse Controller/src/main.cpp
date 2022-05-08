@@ -13,10 +13,10 @@
 
 #define NUM_CALIBRATION_SAMPLES 100
 
-#define STRAIGHT_THRESHOLD 13.0 //cm
+#define STRAIGHT_THRESHOLD 9.0 //cm
 #define STRAIGHT_DISTANCE 15.0 //cm
-#define CURVE_DISTANCE 15.0*2.0*PI/4.0
-/*#define CURVE_DISTANCE 5 + 10*2*PI/4 + 5 //cm*/
+//#define CURVE_DISTANCE 15.0*2.0*PI/4.0
+#define CURVE_DISTANCE 5.0 + (10.0*2.0*PI/4.0) + 5.0 //cm
 #define NODE_READ_DISTANCE 2.5 //cm
 #define WHEEL_TO_NODE_DISTANCE 8.5 //cm
 
@@ -202,8 +202,6 @@ void rotateLeft(int deg, Encoder &encL, Encoder &encR) {
   float derivative_R = 0;
   float prevError_R = 0;
 
-  int prevPos_L = 0;  //get start position
-  int prevPos_R = 0;  //get start position
   long prevTime = micros();  //get start time in us
   encL.write(0); encR.write(0); //clear encoders
   delay(10);
@@ -236,8 +234,6 @@ void rotateLeft(int deg, Encoder &encL, Encoder &encR) {
 
     //update variables
     prevTime = currentTime;
-    prevPos_L = currentPos_L;
-    prevPos_R = currentPos_R;
     prevError_L = currentError_L;
     prevError_R = currentError_R;
     
@@ -266,7 +262,7 @@ void rotateLeft(int deg, Encoder &encL, Encoder &encR) {
     timeElapsed = (millis() - prevTime_Rot);
     zPosition = zPosition + (zVel * timeElapsed / 1000);
     prevTime_Rot = millis();
-    Serial.println(zPosition);
+    //Serial.println(zPosition);
     if (zPosition >= deg*DEG_TO_RAD) {
       stopMove();
       return;
@@ -298,8 +294,6 @@ void rotateRight(int deg, Encoder &encL, Encoder &encR) {
   float derivative_R = 0;
   float prevError_R = 0;
 
-  int prevPos_L = 0;  //get start position
-  int prevPos_R = 0;  //get start position
   long prevTime = micros();  //get start time in us
   encL.write(0); encR.write(0); //clear encoders
   delay(10);
@@ -332,8 +326,6 @@ void rotateRight(int deg, Encoder &encL, Encoder &encR) {
 
     //update variables
     prevTime = currentTime;
-    prevPos_L = currentPos_L;
-    prevPos_R = currentPos_R;
     prevError_L = currentError_L;
     prevError_R = currentError_R;
     
@@ -362,7 +354,7 @@ void rotateRight(int deg, Encoder &encL, Encoder &encR) {
     timeElapsed = (millis() - prevTime_Rot);
     zPosition = zPosition + (zVel * timeElapsed / 1000);
     prevTime_Rot = millis();
-    Serial.println(zPosition);
+    //Serial.println(zPosition);
     if (zPosition <= -deg*DEG_TO_RAD) {
       stopMove();
       return;
@@ -500,12 +492,12 @@ void PIDForward(float distance, Encoder &encL, Encoder &encR) {
       }
     }
     float line_pos = (float)sum/tally; //average position on the line
-    Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
+    //Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
     int target_line = 7; //desired average is the center
     line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
-    Serial.print("Error: "); Serial.print(line_error); Serial.println();
+    //Serial.print("Error: "); Serial.print(line_error); Serial.println();
     float adjust_vel = kP_line * line_error;
-    Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
+    //Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
     if(line_error == 0 || emptyCheck < 3) {  //on track, reset
       targetVel_L = 10;
       targetVel_R = 10;
@@ -631,21 +623,22 @@ void PIDBackward(float distance, Encoder &encL, Encoder &encR) {
 void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
   switch (instruction) {
     case 'F':
+      PIDForward(2.5, encL, encR); //Move off node
       break;
     case 'L':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateLeft(88,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE, encL, encR);
+      PIDBackward(WHEEL_TO_NODE_DISTANCE - 2.5, encL, encR);
       break;
     case 'R':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateRight(88,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE, encL, encR);
+      PIDBackward(WHEEL_TO_NODE_DISTANCE - 2.5, encL, encR);
       break;
     case 'B':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateRight(178,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE, encL, encR);
+      PIDBackward(WHEEL_TO_NODE_DISTANCE - 2.5, encL, encR);
       break;
     case 'Y': 
       ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
@@ -820,276 +813,282 @@ void loop() {
                           (uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
 
     float zOffset = calibrateMouseZ();
-    float xOffset = calibrateMouseX();
     float zPosition = 0.0;
     float xPosition = 0.0;
 
     switch (type) {
       case WStype_DISCONNECTED: {
-        Serial.printf("[%u] Disconnected!", num);
+        //Serial.printf("[%u] Disconnected!", num);
         break;
       }
 
       case WStype_CONNECTED: {
         IPAddress ip = webSocket.remoteIP(num);
-        Serial.printf("[%u] Connection from ", num);
-        Serial.printf(ip.toString().c_str());
+        //Serial.printf("[%u] Connection from ", num);
+        //Serial.printf(ip.toString().c_str());
         break;
       }
 
       case WStype_TEXT: {
-        Serial.printf("[%u] Text: %s\n", num, payload);
-        Serial.println();
-
+        //Serial.printf("[%u] Text: %s\n", num, payload);
+        //Serial.println();
+        
         String instructions = String((char *)payload);
+        bool endFlag = false;
         if (instructions == "E") {
           instructions == "";
         }
 
         String path = "";
-        int pathType = F_PATH;
-        int orientation = 0;
-        bool distanceReset = true;
 
         PIDForward(6,encL,encR);
 
-        float timeElapsed = 0.0;
-        float zVel = 0.0;
-        float xAcc = 0.0;
-        unsigned long prevTime_Rot = millis();
+        while (!endFlag) {
+          int pathType = F_PATH;
+          int orientation = 0;
+          bool straightDistanceReset = true;
+          bool curveDistanceReset = true;
 
-        //PID Control
-        float targetVel_L = 10;  //in cm/s
-        float targetVel_R = 10;  //in cm/s
-        float targetPos_L = 0;
-        float targetPos_R = 0;
+          float timeElapsed = 0.0;
+          float zVel = 0.0;
+          unsigned long prevTime_Rot = millis();
 
-        float currentError_L = 0;
-        float integral_L = 0;
-        float derivative_L = 0;
-        float prevError_L = 0;
+          //PID Control
+          float targetVel_L = 10;  //in cm/s
+          float targetVel_R = 10;  //in cm/s
+          float targetPos_L = 0;
+          float targetPos_R = 0;
 
-        float currentError_R = 0;
-        float integral_R = 0;
-        float derivative_R = 0;
-        float prevError_R = 0;
+          float currentError_L = 0;
+          float integral_L = 0;
+          float derivative_L = 0;
+          float prevError_L = 0;
 
-        int prevPos_L = 0;  //get start position
-        int prevPos_R = 0;  //get start position
-        long prevTime = micros();  //get start time in us
-        encL.write(0); encR.write(0); //clear encoders
-        delay(10);
+          float currentError_R = 0;
+          float integral_R = 0;
+          float derivative_R = 0;
+          float prevError_R = 0;
 
-        //Move forward until interupt or until path needs to be sent
-
-        while (1) {
-          long currentTime = micros(); //time in us
-          int currentPos_L = encL.read(); //actually right
-          int currentPos_R = -encR.read(); // actually left
-          float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
-
-          //calculate desired position (ticks)
-          float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
-          float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
-
-          //increment target position
-          targetPos_L = targetPos_L + deltaPos_L;
-          targetPos_R = targetPos_R + deltaPos_R;
-
-          //calculate control values
-          currentError_L = targetPos_L - currentPos_L;
-          integral_L = integral_L + currentError_L*deltaTime;
-          derivative_L = (currentError_L - prevError_L)/deltaTime;
-
-          currentError_R = targetPos_R - currentPos_R;
-          integral_R = integral_R + currentError_R*deltaTime;
-          derivative_R = (currentError_R - prevError_R)/deltaTime;
-
-          float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
-          float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
-
-          //update variables
-          prevTime = currentTime;
-          prevPos_L = currentPos_L;
-          prevPos_R = currentPos_R;
-          prevError_L = currentError_L;
-          prevError_R = currentError_R;
-          
-          //set motor power
-          if (u_L > MAX_PWM_VALUE) { //if too large, cap
-            u_L = MAX_PWM_VALUE;
-          }
-          else if (u_L <= 0) {
-            u_L = 0;
-          }
-
-          //set motor power
-          if (u_R > MAX_PWM_VALUE) { //if too large, cap
-            u_R = MAX_PWM_VALUE;
-          }
-          else if (u_R <= 0) {
-            u_R = 0;
-          }
-
-          //drive motors
-          M_RIGHT_forward(u_R); 
-          M_LEFT_forward(u_L);  
-
-          //read reflectance sensors to stay on line
-          senseLine(bit_buf);
-          //proportional control for line following correction
-          int sum = 0;
-          int tally = 0;  //number of sensors active
-          for(int i = 1; i < 14; i++) { //tally up all reflectance sensors
-            if(bit_buf[i] == 1) {
-              sum = sum + i;  //if that sensor is on, add its index
-              tally++;
-            }
-          }
-          float line_pos = (float)sum/tally; //average position on the line
-          //Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
-          int target_line = 7; //desired average is the center
-          line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
-          //Serial.print("Error: "); Serial.print(line_error); Serial.println();
-          float adjust_vel = kP_line * line_error;
-          //Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
-          if(line_error == 0 || emptyCheck < 3) {  //on track, reset
-            targetVel_L = 10;
-            targetVel_R = 10;
-          }
-          else {
-            targetVel_L += adjust_vel;  //adjust is pos --> left needs to be pos.
-            targetVel_R -= adjust_vel;  //adjust is neg --> right needs to be pos. (double neg)
-          }
-          
-          currentPos_L = encL.read();
-          currentPos_R = -encR.read();
-
-          //Get gyro measurements
-          mpu.getEvent(&a, &g, &temp);
-          timeElapsed = (millis() - prevTime_Rot);
-          prevTime_Rot = millis();
-
-          zVel = g.gyro.z - zOffset;
-          zPosition = zPosition + (zVel * timeElapsed / 1000.0);
-
-          xPosition = (currentPos_L + currentPos_R) * 0.5 / ROTATION * (2*PI*WHEEL_RADIUS/10) - dist_adjust;
-
-          Serial.print("X: "); Serial.print(xPosition); Serial.println();
-
-          //If mouse hits junction with left or right path and no instructions
-          if ((leftSensors > 3 || rightSensors > 3) && instructions.length() == 0) {
-            Serial.println("Junction No Inst");
-            stopMove();
-            delay(10);
-            PIDBackward(4, encL, encR);
-            emptyCheck = 0;
-            path = path + "J"; //Junction
-            Serial.println("J instruction");
-            break;
-
-          //If mouse hits junction with left or right path and has instructions
-          } else if (leftSensors > 3 || rightSensors > 3) {
-            Serial.println("Junction Yes Inst");
-            instructionHandler(instructions[0],encL,encR);
-            instructions.remove(0);
-            emptyCheck = 0;
-            distanceReset = true;
-            zPosition = 0.0;
-            encL.write(0);
-            encR.write(0);
-            
-          
-          //If mouse hits dead end
-          } else if (emptyCheck == 13) {
-            Serial.println("Dead End");
-            stopMove();
-            emptyCheck = 0;
-            path = path + "D"; //Dead end
-            Serial.println("D instruction");
-            break;
-          
-          //If no junctions, dead ends, or instructions, move forward
-          } else {
-            Serial.println("Forward");
-            int zPositionCheck = (int)(zPosition*RAD_TO_DEG)%360;
-            if (distanceReset && orientation == 0 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
-              pathType = FR_PATH;
-              distanceReset = false;
-              path = path + "R";
-              Serial.println("R instruction");
-              orientation = 270;
-            } else if (distanceReset && orientation == 0 && LOWER_90 < zPositionCheck && zPositionCheck < UPPER_90) {
-              pathType = FL_PATH;
-              distanceReset = false;
-              path = path + "L";
-              Serial.println("L instruction");
-              orientation = 90;
-            } else if (distanceReset && orientation == 90 && LOWER_0 < zPositionCheck && zPositionCheck < UPPER_0) {
-              pathType = FR_PATH;
-              distanceReset = false;
-              path = path + "R";
-              Serial.println("R instruction");
-              orientation = 0;
-            } else if (distanceReset && orientation == 90 && LOWER_180 < zPositionCheck && zPositionCheck < UPPER_180) {
-              pathType = FL_PATH;
-              distanceReset = false;
-              path = path + "L";
-              Serial.println("L instruction");
-              orientation = 180;
-            } else if (distanceReset && orientation == 180 && LOWER_90 < zPositionCheck && zPositionCheck < UPPER_90) {
-              pathType = FR_PATH;
-              distanceReset = false;
-              path = path + "R";
-              Serial.println("R instruction");
-              orientation = 90;
-            } else if (distanceReset && orientation == 180 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
-              pathType = FL_PATH;
-              distanceReset = false;
-              path = path + "L";
-              Serial.println("L instruction");
-              orientation = 270;
-            } else if (distanceReset && orientation == 270 && LOWER_180 < zPositionCheck && zPositionCheck < UPPER_180) {
-              pathType = FR_PATH;
-              distanceReset = false;
-              path = path + "R";
-              Serial.println("R instruction");
-              orientation = 180;
-            } else if (distanceReset && orientation == 270 && LOWER_0 < zPositionCheck && zPositionCheck < UPPER_0) {
-              pathType = FL_PATH;
-              distanceReset = false;
-              path = path + "L";
-              Serial.println("L instruction");
-              orientation = 0;
-            } else if (distanceReset && pathType == F_PATH && xPosition > STRAIGHT_THRESHOLD) {
-              path = path + "F";
-              Serial.println("F instruction");
-              distanceReset = false;
-            } else if (!distanceReset && pathType == F_PATH && xPosition > STRAIGHT_DISTANCE) {
-              Serial.println("Reset distance");
-              float xPositionTicks = (((xPosition - STRAIGHT_DISTANCE) + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION);
-              encL.write(xPositionTicks);
-              encR.write(xPositionTicks);
-              distanceReset = true;
-            } else if (!distanceReset && pathType != F_PATH && xPosition > CURVE_DISTANCE) {
-              Serial.println("Reset distance");
-              float xPositionTicks = (((xPosition - STRAIGHT_DISTANCE) + dist_adjust)/(2*PI*WHEEL_RADIUS/10)*ROTATION);
-              encL.write(xPositionTicks);
-              encR.write(xPositionTicks);
-              distanceReset = true;
-            }
-
-            emptyCheck = 0;
-            Serial.print("Reset: "); Serial.print(distanceReset); Serial.println();
-            Serial.print("Path Type: "); Serial.print(pathType); Serial.println();
-            Serial.print("Path: "); Serial.print(path); Serial.println();
-            Serial.print("Orientation: "); Serial.print(orientation); Serial.println(); Serial.println();
-          }
-          
+          long prevTime = micros();  //get start time in us
+          encL.write(0); encR.write(0); //clear encoders
+          float totalDistance = 0.0;
           delay(10);
+
+          //Move forward until interupt or until path needs to be sent
+
+          while (1) {
+            long currentTime = micros(); //time in us
+            int currentPos_L = encL.read(); //actually right
+            int currentPos_R = -encR.read(); // actually left
+            float deltaTime = ((float) (currentTime - prevTime))/1.0e6; //delta time in s
+
+            //calculate desired position (ticks)
+            float deltaPos_L = (targetVel_L*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+            float deltaPos_R = (targetVel_R*ROTATION/(2*PI*WHEEL_RADIUS/10))*deltaTime; //pos increment if going at this speed
+
+            //increment target position
+            targetPos_L = targetPos_L + deltaPos_L;
+            targetPos_R = targetPos_R + deltaPos_R;
+
+            //calculate control values
+            currentError_L = targetPos_L - currentPos_L;
+            integral_L = integral_L + currentError_L*deltaTime;
+            derivative_L = (currentError_L - prevError_L)/deltaTime;
+
+            currentError_R = targetPos_R - currentPos_R;
+            integral_R = integral_R + currentError_R*deltaTime;
+            derivative_R = (currentError_R - prevError_R)/deltaTime;
+
+            float u_L = Kp_L*currentError_L + Ki_L*integral_L + Kd_L*derivative_L;
+            float u_R = Kp_R*currentError_R + Ki_R*integral_R + Kd_R*derivative_R;
+
+            //update variables
+            prevTime = currentTime;
+            prevError_L = currentError_L;
+            prevError_R = currentError_R;
+            
+            //set motor power
+            if (u_L > MAX_PWM_VALUE) { //if too large, cap
+              u_L = MAX_PWM_VALUE;
+            }
+            else if (u_L <= 0) {
+              u_L = 0;
+            }
+
+            //set motor power
+            if (u_R > MAX_PWM_VALUE) { //if too large, cap
+              u_R = MAX_PWM_VALUE;
+            }
+            else if (u_R <= 0) {
+              u_R = 0;
+            }
+
+            //drive motors
+            M_RIGHT_forward(u_R); 
+            M_LEFT_forward(u_L);  
+
+            //read reflectance sensors to stay on line
+            senseLine(bit_buf);
+            //proportional control for line following correction
+            int sum = 0;
+            int tally = 0;  //number of sensors active
+            for(int i = 1; i < 14; i++) { //tally up all reflectance sensors
+              if(bit_buf[i] == 1) {
+                sum = sum + i;  //if that sensor is on, add its index
+                tally++;
+              }
+            }
+            float line_pos = (float)sum/tally; //average position on the line
+            //Serial.print("Line Position: "); Serial.print(line_pos); Serial.println();
+            int target_line = 7; //desired average is the center
+            line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
+            //Serial.print("Error: "); Serial.print(line_error); Serial.println();
+            float adjust_vel = kP_line * line_error;
+            //Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
+            if(line_error == 0 || emptyCheck < 3) {  //on track, reset
+              targetVel_L = 10;
+              targetVel_R = 10;
+            }
+            else {
+              targetVel_L += adjust_vel;  //adjust is pos --> left needs to be pos.
+              targetVel_R -= adjust_vel;  //adjust is neg --> right needs to be pos. (double neg)
+            }
+            
+            currentPos_L = encL.read();
+            currentPos_R = -encR.read();
+
+            //Get gyro measurements
+            mpu.getEvent(&a, &g, &temp);
+            timeElapsed = (millis() - prevTime_Rot);
+            prevTime_Rot = millis();
+
+            zVel = g.gyro.z - zOffset;
+            zPosition = zPosition + (zVel * timeElapsed / 1000.0);
+
+            xPosition = (currentPos_L + currentPos_R) * 0.5 / ROTATION * (2*PI*WHEEL_RADIUS/10) - dist_adjust;
+
+            //Serial.print("X: "); Serial.print(xPosition); Serial.println();
+
+            //If mouse hits junction with left or right path and no instructions
+            if ((leftSensors > 3 || rightSensors > 3) && instructions.length() == 0) {
+              //Serial.println("Junction w/o Inst");
+              stopMove();
+              delay(10);
+              PIDBackward(4, encL, encR);
+              emptyCheck = 0;
+              path = path + "J"; //Junction
+              endFlag = true;
+              break;
+
+            //If mouse hits junction with left or right path and has instructions
+            } else if (leftSensors > 3 || rightSensors > 3) {
+              //Serial.println("Junction w/ Inst");
+              char instruction = instructions[0];
+              instructionHandler(instruction,encL,encR);
+              instructions.remove(0);
+              emptyCheck = 0;
+              break;
+              //TODO: Instruction handling resets encoders w/o breaking
+            
+            //If mouse hits dead end
+            } else if (emptyCheck == 13) {
+              //Serial.println("Dead End");
+              stopMove();
+              delay(10);
+              PIDBackward(4, encL, encR);
+              emptyCheck = 0;
+              path = path + "D"; //Dead end
+              endFlag = true;
+              break;
+            
+            //If no junctions, dead ends, or instructions, move forward
+            } else if (instructions.length() == 0) {
+              //Serial.println("Forward");
+              int zPositionCheck = (int)(zPosition*RAD_TO_DEG)%360;
+
+              if (curveDistanceReset && orientation == 0 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
+                pathType = FR_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "R";
+                //Serial.println("R instruction");
+                orientation = 270;
+              } else if (curveDistanceReset && orientation == 0 && LOWER_90 < zPositionCheck && zPositionCheck < UPPER_90) {
+                pathType = FL_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "L";
+                //Serial.println("L instruction");
+                orientation = 90;
+              } else if (curveDistanceReset && orientation == 90 && LOWER_0 < zPositionCheck && zPositionCheck < UPPER_0) {
+                pathType = FR_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "R";
+                //Serial.println("R instruction");
+                orientation = 0;
+              } else if (curveDistanceReset && orientation == 90 && LOWER_180 < zPositionCheck && zPositionCheck < UPPER_180) {
+                pathType = FL_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "L";
+                //Serial.println("L instruction");
+                orientation = 180;
+              } else if (curveDistanceReset && orientation == 180 && LOWER_90 < zPositionCheck && zPositionCheck < UPPER_90) {
+                pathType = FR_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "R";
+                //Serial.println("R instruction");
+                orientation = 90;
+              } else if (curveDistanceReset && orientation == 180 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
+                pathType = FL_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "L";
+                //Serial.println("L instruction");
+                orientation = 270;
+              } else if (curveDistanceReset && orientation == 270 && LOWER_180 < zPositionCheck && zPositionCheck < UPPER_180) {
+                pathType = FR_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "R";
+                //Serial.println("R instruction");
+                orientation = 180;
+              } else if (curveDistanceReset && orientation == 270 && LOWER_0 < zPositionCheck && zPositionCheck < UPPER_0) {
+                pathType = FL_PATH;
+                curveDistanceReset = false;
+                straightDistanceReset = true;
+                path = path + "L";
+                //Serial.println("L instruction");
+                orientation = 0;
+              } else if (straightDistanceReset && pathType == F_PATH && xPosition > (STRAIGHT_THRESHOLD + totalDistance)) {
+                path = path + "F";
+                curveDistanceReset = true;
+                straightDistanceReset = false;
+              } else if (!straightDistanceReset && pathType == F_PATH && xPosition > (STRAIGHT_DISTANCE + totalDistance)) {
+                //Serial.println("Reset distance");
+                totalDistance += STRAIGHT_DISTANCE;
+                curveDistanceReset = true;
+                straightDistanceReset = true;
+              } else if (!curveDistanceReset && pathType != F_PATH && xPosition > (CURVE_DISTANCE + totalDistance)) {
+                //Serial.println("Reset distance");
+                totalDistance += CURVE_DISTANCE;
+                curveDistanceReset = true;
+                straightDistanceReset = true;
+                pathType = F_PATH;
+              }
+
+              emptyCheck = 0;
+              //Serial.print("Reset: "); Serial.print(curveDistanceReset); Serial.println();
+              //Serial.print("Path: "); Serial.print(path); Serial.println();
+            }
+            
+            delay(10);
+          }
         }
 
-        Serial.print("Final Path: "); Serial.print(path); Serial.println();
+        //Serial.print("Final Path: "); Serial.print(path); Serial.println();
         webSocket.sendTXT(num, path);
         delay(100);
         break;
