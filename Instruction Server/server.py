@@ -712,7 +712,7 @@ class Maze:
         print(f"Sending {self.instruction} to {self.mouse.name}")
         self.mouse_socket.send(self.instruction)
         mouse_data = self.mouse_socket.recv()
-        mouse_data = input('Mouse data: ')
+        #mouse_data = input('Mouse data: ')
         print('Mouse Data: ', mouse_data)
         self.handleMouseData(mouse_data)
         self.serveNextInstruction()
