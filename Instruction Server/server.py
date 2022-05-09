@@ -582,12 +582,12 @@ class Maze:
         self.prev_y = 0
         self.prev_facing = 'n'
         self.camera_ip_addr = camera_ip_addr
-        self.camera_socket = websocket.WebSocket()
-        self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
+        #self.camera_socket = websocket.WebSocket()
+        #self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
         print(f"[Connected to Junction Processor]")
         print()
-        self.mouse_socket = websocket.WebSocket()
-        self.mouse_socket.connect(f"ws://{self.mouse.ip}")
+        #self.mouse_socket = websocket.WebSocket()
+        #self.mouse_socket.connect(f"ws://{self.mouse.ip}")
         print(f"[Connected to {self.mouse.name}]")
         print()
 
@@ -710,10 +710,12 @@ class Maze:
     # Returns the request's response object
     def sendInstruction(self, instruction):
         self.instruction = self.instruction + instruction
+        if (self.instruction == ''):
+            self.instruction = 'E'
         print(f"Sending {self.instruction} to {self.mouse.name}")
-        self.mouse_socket.send(self.instruction)
-        mouse_data = self.mouse_socket.recv()
-        #mouse_data = input('Mouse data: ')
+        #self.mouse_socket.send(self.instruction)
+        #mouse_data = self.mouse_socket.recv()
+        mouse_data = input('Mouse data: ')
         print('Mouse Data: ', mouse_data)
         self.handleMouseData(mouse_data)
         self.serveNextInstruction()
@@ -764,7 +766,7 @@ class Maze:
     # Get available paths, VIP name if present, and whether or not the current node is the end of the maze from the camera via GET request to the camera server's IP address for current mouse to get 
     # Returns the request's response object
     def getJunctionData(self):
-        #return get_camera_data()
+        return get_camera_data()
         print()
         print(f"[Requesting junction data]")
         print()

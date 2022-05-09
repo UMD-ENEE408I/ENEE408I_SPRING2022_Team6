@@ -839,13 +839,43 @@ void loop() {
         
         String instructions = String((char *)payload);
         bool endFlag = false;
-        if (instructions == "E") {
-          instructions == "";
+
+        switch (instructions[0]) { //Handle first instruction
+          case 'E':
+            instructions == "";
+            PIDForward(6, encL, encR);
+            break;
+          
+          case 'Y':
+          case 'N':
+          case 'S':
+            instructionHandler(instructions[0], encL, encR);
+            instructions.remove(0);
+            if (instructions.length() == 0) {
+              endFlag = true;
+            } else {
+              PIDForward(4, encL, encR);
+              instructionHandler(instructions[0], encL, encR);
+            }
+            break;
+          
+          case 'L':
+          case 'R':
+            PIDForward(4, encL, encR);
+            instructionHandler(instructions[0], encL, encR);
+            break;
+          
+          case 'F':
+            PIDForward(6, encL, encR);
+            instructions.remove(0);
+            break;
+
+
+          default:
+            break;
         }
 
         String path = "";
-
-        PIDForward(6,encL,encR);
 
         while (!endFlag) {
           int pathType = F_PATH;
@@ -996,7 +1026,6 @@ void loop() {
                 endFlag = true;
               }
               break;
-              //TODO: Instruction handling resets encoders w/o breaking
             
             //If mouse hits dead end
             } else if (emptyCheck == 13) {
