@@ -1022,7 +1022,7 @@ void loop() {
               instructionHandler(instruction,encL,encR);
               instructions.remove(0);
               emptyCheck = 0;
-              if ((instruction == 'Y' || instruction == 'N' || instruction == 'S') && instructions.length == 0) {
+              if ((instruction == 'Y' || instruction == 'N' || instruction == 'S') && instructions.length() == 0) {
                 endFlag = true;
               }
               break;
