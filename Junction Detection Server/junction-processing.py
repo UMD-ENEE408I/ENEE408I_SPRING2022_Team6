@@ -24,10 +24,17 @@ params = {
     "vip": ""
 }
 
-match_tests = [("forward",220,420,60,480), ("forward to left",0,420,140,480), ("forward to right",220,640,140,480),
-            ("left",0,280,240,480), ("left to forward",35,400,140,480), ("left to backward",0,320,280,480),
-            ("right",360,640,240,480), ("right to forward",240,615,140,480), ("right to backward",320,640,280,480),
-            ("end",0,640,120,480)]
+match_tests = [("F", "forward",200,440,80,320), ("F-1", "forward",200,440,80,320), ("F-2", "forward",200,440,80,320), ("F-3", "forward",200,440,80,320), ("F-4", "forward",200,440,80,320), 
+                ("F-5", "forward",200,440,80,320), ("F-6", "forward",200,440,80,320), ("F-7", "forward",200,440,80,320), ("F-8", "forward",200,440,80,320), ("F-9", "forward",200,440,80,320), 
+                ("FL", "forward to left",60,540,30,310), ("FL-1", "forward to left",60,540,30,310), ("FL-2", "forward to left",60,540,30,310), ("FL-3", "forward to left",60,540,30,310), ("FL-4", "forward to left",60,540,30,310), ("FL-5", "forward to left",60,540,30,310), 
+                ("FR", "forward to right",100,580,30,310), ("FR-1", "forward to right",100,580,30,310), ("FR-2", "forward to right",100,580,30,310), ("FR-3", "forward to right",100,580,30,310), ("FR-4", "forward to right",100,580,30,310), ("FR-5", "forward to right",100,580,30,310), 
+                ("L", "left",10,340,140,380), ("L-1", "left",10,340,140,380), ("L-2", "left",10,340,140,380), ("L-3", "left",10,340,140,380), ("L-4", "left",10,340,140,380), ("L-5", "left",10,340,140,380), 
+                ("LF", "left to forward",0,360,80,400), ("LF-1", "left to forward",0,360,80,400), ("LF-2", "left to forward",0,360,80,400), ("LF-3", "left to forward",0,360,80,400), ("LF-4", "left to forward",0,360,80,400), ("LF-5", "left to forward",0,360,80,400), 
+                ("LB", "left to backward",0,380,120,480), ("LB-1", "left to backward",0,380,120,480), ("LB-2", "left to backward",0,380,120,480), ("LB-3", "left to backward",0,380,120,480), ("LB-4", "left to backward",0,380,120,480), ("LB-5", "left to backward",0,380,120,480), 
+                ("R", "right",300,630,140,380), ("R-1", "right",300,630,140,380), ("R-2", "right",300,630,140,380), ("R-3", "right",300,630,140,380), ("R-4", "right",300,630,140,380), ("R-5", "right",300,630,140,380), 
+                ("RF", "right to forward",280,640,80,400), ("RF-1", "right to forward",280,640,80,400), ("RF-2", "right to forward",280,640,80,400), ("RF-3", "right to forward",280,640,80,400), ("RF-4", "right to forward",280,640,80,400), ("RF-5", "right to forward",280,640,80,400), 
+                ("RB", "right to backward",260,640,120,480), ("RB-1", "right to backward",260,640,120,480), ("RB-2", "right to backward",260,640,120,480), ("RB-3", "right to backward",260,640,120,480), ("RB-4", "right to backward",260,640,120,480), ("RB-5", "right to backward",260,640,120,480), 
+                ("END", "end",0,640,120,480)]
 
 # Load a sample picture and learn how to recognize it.
 chan_image = face_recognition.load_image_file("C://Users//hnrom//ENEE408I//dataset//jackie_chan//jackie_1.jpg")
@@ -74,10 +81,10 @@ def get_junction():
         ret, thresh = cv2.threshold(junction_gray,215,255,cv2.THRESH_BINARY)
         
         for match_test in match_tests:
-            match_type, left, right, top, bottom = match_test
+            filename, match_type, left, right, top, bottom = match_test
             test_im = thresh[top:bottom,left:right]
         
-            template = np.array(PIL.Image.open("C://Users//hnrom//ENEE408I//ENEE408I_SPRING2022_Team6-demo_test_sockets//Junction Detection Server//templates\\" + match_type + ".png"))
+            template = np.array(PIL.Image.open("C://Users//hnrom//ENEE408I//ENEE408I_SPRING2022_Team6-demo_test_sockets//Junction Detection Server//templates\\" + filename + ".png"))
             template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         
             test_im_copy = test_im.copy()
