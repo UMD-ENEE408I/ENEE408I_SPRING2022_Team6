@@ -13,7 +13,7 @@
 
 #define NUM_CALIBRATION_SAMPLES 100
 
-#define STRAIGHT_THRESHOLD 9.0 //cm
+#define STRAIGHT_THRESHOLD 6.0 //cm
 #define STRAIGHT_DISTANCE 15.0 //cm
 //#define CURVE_DISTANCE 15.0*2.0*PI/4.0
 #define CURVE_DISTANCE 5.0 + (10.0*2.0*PI/4.0) + 5.0 //cm
@@ -33,7 +33,7 @@
 #define LOWER_270 225
 #define UPPER_270 315
 
-int mouse = 2;  //select which mouse is running
+int mouse = 1;  //select which mouse is running
 
 Adafruit_MPU6050 mpu;
 Adafruit_MCP3008 adc1;
@@ -623,22 +623,22 @@ void PIDBackward(float distance, Encoder &encL, Encoder &encR) {
 void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
   switch (instruction) {
     case 'F':
-      PIDForward(2.5, encL, encR); //Move off node
+      PIDForward(3, encL, encR); //Move off node
       break;
     case 'L':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateLeft(88,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE - 2.5, encL, encR);
+      PIDBackward(WHEEL_TO_NODE_DISTANCE - 3, encL, encR);
       break;
     case 'R':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateRight(88,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE - 2.5, encL, encR);
+      PIDBackward(WHEEL_TO_NODE_DISTANCE - 3, encL, encR);
       break;
     case 'B':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateRight(178,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE - 2.5, encL, encR);
+      PIDBackward(WHEEL_TO_NODE_DISTANCE - 3, encL, encR);
       break;
     case 'Y': 
       ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
@@ -842,8 +842,8 @@ void loop() {
 
         switch (instructions[0]) { //Handle first instruction
           case 'E':
-            instructions == "";
-            PIDForward(6, encL, encR);
+            instructions.remove(0);
+            PIDForward(7, encL, encR);
             break;
           
           case 'Y':
@@ -856,17 +856,20 @@ void loop() {
             } else {
               PIDForward(4, encL, encR);
               instructionHandler(instructions[0], encL, encR);
+              instructions.remove(0);
             }
             break;
           
           case 'L':
           case 'R':
+          case 'B':
             PIDForward(4, encL, encR);
             instructionHandler(instructions[0], encL, encR);
+            instructions.remove(0);
             break;
           
           case 'F':
-            PIDForward(6, encL, encR);
+            PIDForward(7, encL, encR);
             instructions.remove(0);
             break;
 
@@ -1005,7 +1008,7 @@ void loop() {
 
             //If mouse hits junction with left or right path and no instructions
             if ((leftSensors > 3 || rightSensors > 3) && instructions.length() == 0) {
-              //Serial.println("Junction w/o Inst");
+              //Serial.println("J w/o I");
               stopMove();
               delay(10);
               PIDBackward(4, encL, encR);
@@ -1016,7 +1019,7 @@ void loop() {
 
             //If mouse hits junction with left or right path and has instructions
             } else if (leftSensors > 3 || rightSensors > 3) {
-              //Serial.println("Junction w/ Inst");
+              //Serial.println("J w/ I");
               stopMove();
               char instruction = instructions[0];
               instructionHandler(instruction,encL,encR);
@@ -1029,7 +1032,7 @@ void loop() {
             
             //If mouse hits dead end
             } else if (emptyCheck == 13) {
-              //Serial.println("Dead End");
+              //Serial.println("D");
               stopMove();
               delay(10);
               PIDBackward(4, encL, encR);
@@ -1040,7 +1043,7 @@ void loop() {
             
             //If no junctions, dead ends, or instructions, move forward
             } else if (instructions.length() == 0) {
-              //Serial.println("Forward");
+              //Serial.println("F");
               int zPositionCheck = (int)(zPosition*RAD_TO_DEG)%360;
 
               if (curveDistanceReset && orientation == 0 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
@@ -1125,7 +1128,7 @@ void loop() {
           }
         }
 
-        //Serial.print("Final Path: "); Serial.print(path); Serial.println();
+        //Serial.print("Fin: "); Serial.print(path); Serial.println();
         webSocket.sendTXT(num, path);
         delay(100);
         break;
