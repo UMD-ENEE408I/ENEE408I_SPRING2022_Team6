@@ -673,6 +673,10 @@ void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
       delay(150);
       delay(5000);
       break;
+    case 'W':
+      //TODO: Add W sound
+      delay(5000);
+      break;
   }
 }
 
