@@ -10,14 +10,14 @@ import time
 
 match_tests = [("F", "forward",200,440,80,320), ("F-1", "forward",200,440,80,320), ("F-2", "forward",200,440,80,320), ("F-3", "forward",200,440,80,320), ("F-4", "forward",200,440,80,320), 
                 ("F-5", "forward",200,440,80,320), ("F-6", "forward",200,440,80,320), ("F-7", "forward",200,440,80,320), ("F-8", "forward",200,440,80,320), ("F-9", "forward",200,440,80,320), 
-                #("FL", "forward to left",60,540,30,310), ("FL-1", "forward to left",60,540,30,310), ("FL-2", "forward to left",60,540,30,310), ("FL-3", "forward to left",60,540,30,310), ("FL-4", "forward to left",60,540,30,310), ("FL-5", "forward to left",60,540,30,310), 
-                #("FR", "forward to right",100,580,30,310), ("FR-1", "forward to right",100,580,30,310), ("FR-2", "forward to right",100,580,30,310), ("FR-3", "forward to right",100,580,30,310), ("FR-4", "forward to right",100,580,30,310), ("FR-5", "forward to right",100,580,30,310), 
+                ("FL", "forward to left",60,540,30,310), ("FL-1", "forward to left",60,540,30,310), ("FL-2", "forward to left",60,540,30,310), ("FL-3", "forward to left",60,540,30,310), ("FL-4", "forward to left",60,540,30,310), ("FL-5", "forward to left",60,540,30,310), 
+                ("FR", "forward to right",100,580,30,310), ("FR-1", "forward to right",100,580,30,310), ("FR-2", "forward to right",100,580,30,310), ("FR-3", "forward to right",100,580,30,310), ("FR-4", "forward to right",100,580,30,310), ("FR-5", "forward to right",100,580,30,310), 
                 ("L", "left",10,340,140,380), ("L-1", "left",10,340,140,380), ("L-2", "left",10,340,140,380), ("L-3", "left",10,340,140,380), ("L-4", "left",10,340,140,380), ("L-5", "left",10,340,140,380), 
-                #("LF", "left to forward",0,360,80,400), ("LF-1", "left to forward",0,360,80,400), ("LF-2", "left to forward",0,360,80,400), ("LF-3", "left to forward",0,360,80,400), ("LF-4", "left to forward",0,360,80,400), ("LF-5", "left to forward",0,360,80,400), 
-                #("LB", "left to backward",0,380,120,480), ("LB-1", "left to backward",0,380,120,480), ("LB-2", "left to backward",0,380,120,480), ("LB-3", "left to backward",0,380,120,480), ("LB-4", "left to backward",0,380,120,480), ("LB-5", "left to backward",0,380,120,480), 
+                ("LF", "left to forward",0,360,80,400), ("LF-1", "left to forward",0,360,80,400), ("LF-2", "left to forward",0,360,80,400), ("LF-3", "left to forward",0,360,80,400), ("LF-4", "left to forward",0,360,80,400), ("LF-5", "left to forward",0,360,80,400), 
+                ("LB", "left to backward",0,380,120,480), ("LB-1", "left to backward",0,380,120,480), ("LB-2", "left to backward",0,380,120,480), ("LB-3", "left to backward",0,380,120,480), ("LB-4", "left to backward",0,380,120,480), ("LB-5", "left to backward",0,380,120,480), 
                 ("R", "right",300,630,140,380), ("R-1", "right",300,630,140,380), ("R-2", "right",300,630,140,380), ("R-3", "right",300,630,140,380), ("R-4", "right",300,630,140,380), ("R-5", "right",300,630,140,380), 
-                #("RF", "right to forward",280,640,80,400), ("RF-1", "right to forward",280,640,80,400), ("RF-2", "right to forward",280,640,80,400), ("RF-3", "right to forward",280,640,80,400), ("RF-4", "right to forward",280,640,80,400), ("RF-5", "right to forward",280,640,80,400), 
-                #("RB", "right to backward",260,640,120,480), ("RB-1", "right to backward",260,640,120,480), ("RB-2", "right to backward",260,640,120,480), ("RB-3", "right to backward",260,640,120,480), ("RB-4", "right to backward",260,640,120,480), ("RB-5", "right to backward",260,640,120,480), 
+                ("RF", "right to forward",280,640,80,400), ("RF-1", "right to forward",280,640,80,400), ("RF-2", "right to forward",280,640,80,400), ("RF-3", "right to forward",280,640,80,400), ("RF-4", "right to forward",280,640,80,400), ("RF-5", "right to forward",280,640,80,400), 
+                ("RB", "right to backward",260,640,120,480), ("RB-1", "right to backward",260,640,120,480), ("RB-2", "right to backward",260,640,120,480), ("RB-3", "right to backward",260,640,120,480), ("RB-4", "right to backward",260,640,120,480), ("RB-5", "right to backward",260,640,120,480), 
                 ("END", "end",0,640,0,480), ("END-1", "end",0,640,0,480), ("END-2", "end",0,640,0,480), ("END-3", "end",0,640,0,480)]
 
 
@@ -58,6 +58,10 @@ video_capture = cv2.VideoCapture(0)
 
 def get_junction():
 
+    right_similarity = 0
+    left_similarity = 0
+    forward_similarity = 0
+
     paths = {}
     is_end = False
     
@@ -85,8 +89,51 @@ def get_junction():
         
             if (similarity > 0.8) and match_type == "end":
                 is_end = True
-            elif (similarity > 0.78):
-                paths[match_type] = True
+            elif (similarity > 0.78) and (match_type == 'forward') and (similarity > forward_similarity):
+                forward_similarity = similarity
+                paths['forward'] = True
+                paths['forward to left'] = False
+                paths['forward to left'] = False
+            elif (similarity > 0.78) and (match_type == 'forward to left') and (similarity > forward_similarity):
+                forward_similarity = similarity
+                paths['forward'] = False
+                paths['forward to left'] = True
+                paths['forward to left'] = False
+            elif (similarity > 0.78) and (match_type == 'forward to right') and (similarity > forward_similarity):
+                forward_similarity = similarity
+                paths['forward'] = False
+                paths['forward to left'] = False
+                paths['forward to left'] = True
+            elif (similarity > 0.78) and (match_type == 'left') and (similarity > left_similarity):
+                left_similarity = similarity
+                paths['left'] = True
+                paths['left to forward'] = False
+                paths['left to backward'] = False
+            elif (similarity > 0.78) and (match_type == 'left to forward') and (similarity > left_similarity):
+                left_similarity = similarity
+                paths['left'] = False
+                paths['left to forward'] = True
+                paths['left to backward'] = False
+            elif (similarity > 0.78) and (match_type == 'left to backward') and (similarity > left_similarity):
+                left_similarity = similarity
+                paths['left'] = False
+                paths['left to forward'] = False
+                paths['left to backward'] = True
+            elif (similarity > 0.78) and (match_type == 'right') and (similarity > right_similarity):
+                right_similarity = similarity
+                paths['right'] = True
+                paths['right to forward'] = False
+                paths['right to backward'] = False
+            elif (similarity > 0.78) and (match_type == 'right to forward') and (similarity > right_similarity):
+                right_similarity = similarity
+                paths['right'] = False
+                paths['right to forward'] = True
+                paths['right to backward'] = False
+            elif (similarity > 0.78) and (match_type == 'right to backward') and (similarity > right_similarity):
+                right_similarity = similarity
+                paths['right'] = False
+                paths['right to forward'] = False
+                paths['right to backward'] = True
             
         count = count + 1
 
