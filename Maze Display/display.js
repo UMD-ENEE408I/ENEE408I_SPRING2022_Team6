@@ -14,7 +14,7 @@ function initMaze() {
 
     fetch("data/data.txt")
         .then((response) => {
-              return response.text();
+            return response.text();
         })
         .then((queryString) => {
             const urlParams = new URLSearchParams(queryString),
@@ -383,12 +383,15 @@ async function showPath() {
         }
 
         div.classList.add(mouseClass);
+        if (i == inst.length -1) {
+            div.classList.add('loop');
+        }
         cell.appendChild(div);
 
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    if (document.querySelector('.mouse')) document.querySelector('.mouse').remove();
+    //if (document.querySelector('.mouse')) document.querySelector('.mouse').remove();
     document.querySelector('a').classList.remove('hide');
 }
 

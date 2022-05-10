@@ -698,9 +698,9 @@ class Maze:
 
         url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{display_instruction}"
         
-        #with open(r'./Maze Display/data/data.txt', 'w') as file:
-        #    file.write(url)
-        #    file.close()
+        with open(r'./Maze Display/data/data.txt', 'w') as file:
+            file.write(url)
+            file.close()
 
         return url
 
@@ -714,7 +714,7 @@ class Maze:
         print(f"Sending {self.instruction} to {self.mouse.name}")
         self.mouse_socket.send(self.instruction)
         mouse_data = self.mouse_socket.recv()
-        #mouse_data = input('Mouse data: ')
+        mouse_data = input('Mouse data: ')
         print('Mouse Data: ', mouse_data)
         self.handleMouseData(mouse_data)
         self.serveNextInstruction()
@@ -732,10 +732,18 @@ class Maze:
 
         facing = self.mouse.facing
 
+        display_data = ''
+
         for instruction in mouse_data:
-            if (instruction == 'F'): path_data_set = PATH_DATA_SETS[facing]['forward']
-            elif (instruction == 'L'): path_data_set = PATH_DATA_SETS[facing]['forward to left']
-            elif (instruction == 'R'): path_data_set = PATH_DATA_SETS[facing]['forward to right']
+            if (instruction == 'F'):
+                path_data_set = PATH_DATA_SETS[facing]['forward']
+                display_data += 'F'
+            elif (instruction == 'L'):
+                path_data_set = PATH_DATA_SETS[facing]['forward to left']
+                display_data += 'C'
+            elif (instruction == 'R'):
+                path_data_set = PATH_DATA_SETS[facing]['forward to right']
+                display_data += 'C'
             else: break
             
             next_x = node.x + path_data_set['x']
@@ -757,7 +765,7 @@ class Maze:
         
         self.mouse.setLocation(node.x, node.y, facing)
 
-        print(node.x, node.y, facing)
+        self.sendDisplayData(display_data)
 
         return
 

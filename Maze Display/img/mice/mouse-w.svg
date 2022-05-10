@@ -1,4 +1,3 @@
 <svg width="288" height="288" viewBox="0 0 288 288" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M108 144L162 112.823V175.177L108 144Z" fill="#EA6635"/>
-<animate attributeName="opacity" dur="1s" keyTimes="0;.5;1" values="1;0;1" repeatCount="indefinite"/>
 </svg>
