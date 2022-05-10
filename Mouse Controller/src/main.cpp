@@ -1068,7 +1068,7 @@ void loop() {
               if (curveDistanceReset && orientation == 0 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
                 pathType = FR_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1078,7 +1078,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 0 && LOWER_90 < zPositionCheck && zPositionCheck < UPPER_90) {
                 pathType = FL_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1088,7 +1088,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 90 && LOWER_0 < zPositionCheck && zPositionCheck < UPPER_0) {
                 pathType = FR_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1098,7 +1098,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 90 && LOWER_180 < zPositionCheck && zPositionCheck < UPPER_180) {
                 pathType = FL_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1108,7 +1108,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 180 && LOWER_90 < zPositionCheck && zPositionCheck < UPPER_90) {
                 pathType = FR_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1118,7 +1118,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 180 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
                 pathType = FL_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1128,7 +1128,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 270 && LOWER_180 < zPositionCheck && zPositionCheck < UPPER_180) {
                 pathType = FR_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
@@ -1138,7 +1138,7 @@ void loop() {
               } else if (curveDistanceReset && orientation == 270 && LOWER_0 < zPositionCheck && zPositionCheck < UPPER_0) {
                 pathType = FL_PATH;
                 if (!straightDistanceReset) {
-                  path.remove(path.length - 1,1)
+                  path.remove(path.length() - 1,1);
                 }
                 curveDistanceReset = false;
                 straightDistanceReset = true;
