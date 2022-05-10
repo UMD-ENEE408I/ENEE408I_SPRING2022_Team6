@@ -24,14 +24,14 @@
 #define FL_PATH 1
 #define FR_PATH 2
 
-#define LOWER_0 280
-#define UPPER_0 80
-#define LOWER_90 10
-#define UPPER_90 170
-#define LOWER_180 100
-#define UPPER_180 260
-#define LOWER_270 190
-#define UPPER_270 350
+#define LOWER_0 315
+#define UPPER_0 45
+#define LOWER_90 45
+#define UPPER_90 135
+#define LOWER_180 135
+#define UPPER_180 225
+#define LOWER_270 225
+#define UPPER_270 315
 
 int mouse = 3;  //select which mouse is running
 
@@ -90,7 +90,7 @@ int leftSensors = 0;
 int rightSensors = 0;
 int emptyCheck = 0;
 
-float kP_line = 0.07;
+float kP_line = 0.05;
 int line_error = 0;
 float dist_adjust = 0.0;
 

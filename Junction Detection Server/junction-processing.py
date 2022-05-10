@@ -18,7 +18,7 @@ match_tests = [("F", "forward",200,440,80,320), ("F-1", "forward",200,440,80,320
                 ("R", "right",300,630,140,380), ("R-1", "right",300,630,140,380), ("R-2", "right",300,630,140,380), ("R-3", "right",300,630,140,380), ("R-4", "right",300,630,140,380), ("R-5", "right",300,630,140,380), 
                 ("RF", "right to forward",280,640,80,400), ("RF-1", "right to forward",280,640,80,400), ("RF-2", "right to forward",280,640,80,400), ("RF-3", "right to forward",280,640,80,400), ("RF-4", "right to forward",280,640,80,400), ("RF-5", "right to forward",280,640,80,400), 
                 ("RB", "right to backward",260,640,120,480), ("RB-1", "right to backward",260,640,120,480), ("RB-2", "right to backward",260,640,120,480), ("RB-3", "right to backward",260,640,120,480), ("RB-4", "right to backward",260,640,120,480), ("RB-5", "right to backward",260,640,120,480), 
-                ("END", "end",0,640,120,480)]
+                ("END", "end",0,640,120,480), ("END-1", "end",0,640,120,480), ("END-2", "end",0,640,120,480), ("END-3", "end",0,640,120,480)]
 
 
 # Facial Detection #
@@ -83,7 +83,7 @@ def get_junction():
             result = cv2.matchTemplate(test_im_copy, template_gray, cv2.TM_CCORR_NORMED)
             min_val, similarity, min_loc, location = cv2.minMaxLoc(result)
         
-            if (similarity > 0.93) and match_type == "end":
+            if (similarity > 0.8) and match_type == "end":
                 is_end = True
             elif (similarity > 0.78):
                 paths[match_type] = True
