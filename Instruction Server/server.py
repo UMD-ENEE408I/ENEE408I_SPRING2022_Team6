@@ -583,7 +583,6 @@ class Maze:
         self.prev_facing = 'n'
         self.camera_ip_addr = camera_ip_addr
         self.camera_socket = websocket.WebSocket()
-        self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
         print(f"[Connected to Junction Processor]")
         print()
         self.mouse_socket = websocket.WebSocket()
@@ -699,9 +698,9 @@ class Maze:
 
         url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{display_instruction}"
         
-        with open(r'./Maze Display/data/data.txt', 'w') as file:
-            file.write(url)
-            file.close()
+        #with open(r'./Maze Display/data/data.txt', 'w') as file:
+        #    file.write(url)
+        #    file.close()
 
         return url
 
@@ -770,10 +769,10 @@ class Maze:
         print()
         print(f"[Requesting junction data]")
         print()
-        self.camera_socket.send(f"{self.mouse.name}")
+        self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
         result = self.camera_socket.recv()
         data = json.loads(result)
-        self.camera_socket.connect(f"ws://{self.camera_ip_addr}")
+        print(data)
         return data
 
 
@@ -1104,19 +1103,23 @@ def initialize_demo():
 
     print()
 
-    mouse_one_vip, mouse_two_vip, mouse_three_vip = input('Enter Mouse VIP Names: ').split()
+    # Mouse 1: 192.168.43.211
+    # Mouse 2: 192.168.43.54
+    # Mouse 3: 192.168.43.46
+    
+    mouse_one_vip, mouse_two_vip, mouse_three_vip = 'dwayne', 'jackie', 'keanu'
     print(f"Mouse One VIP: {mouse_one_vip}")
     print(f"Mouse Two VIP: {mouse_two_vip}")
     print(f"Mouse Three VIP: {mouse_three_vip}")
     print()
 
-    mouse_one_ip_addr, mouse_two_ip_addr, mouse_three_ip_addr = input('Enter Mouse IP Addresses: ').split()
+    mouse_one_ip_addr, mouse_two_ip_addr, mouse_three_ip_addr = '192.168.43.46', '192.168.43.54', '192.168.43.46'
     print(f"Mouse One IP Address: {mouse_one_ip_addr}")
     print(f"Mouse Two IP Address: {mouse_two_ip_addr}")
     print(f"Mouse Three IP Address: {mouse_three_ip_addr}")
     print()
 
-    camera_ip_addr = input('Enter Camera IP Address: ')
+    camera_ip_addr = '127.0.0.1:9000'
 
     mouse1 = Mouse('Mouse 1', mouse_one_ip_addr, 0, 0, 'n', mouse_one_vip)
     mouse2 = Mouse('Mouse 2', mouse_two_ip_addr, 0, 0, 'n', mouse_two_vip)
