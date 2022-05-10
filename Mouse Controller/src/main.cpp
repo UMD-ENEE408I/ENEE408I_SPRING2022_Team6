@@ -13,7 +13,7 @@
 
 #define NUM_CALIBRATION_SAMPLES 100
 
-#define STRAIGHT_THRESHOLD 6.0 //cm
+#define STRAIGHT_THRESHOLD 2.0 //cm
 #define STRAIGHT_DISTANCE 15.0 //cm
 //#define CURVE_DISTANCE 15.0*2.0*PI/4.0
 #define CURVE_DISTANCE 5.0 + (10.0*2.0*PI/4.0) + 5.0 //cm
@@ -24,16 +24,16 @@
 #define FL_PATH 1
 #define FR_PATH 2
 
-#define LOWER_0 315
-#define UPPER_0 45
-#define LOWER_90 45
-#define UPPER_90 135
-#define LOWER_180 135
-#define UPPER_180 225
-#define LOWER_270 225
-#define UPPER_270 315
+#define LOWER_0 280
+#define UPPER_0 80
+#define LOWER_90 10
+#define UPPER_90 170
+#define LOWER_180 100
+#define UPPER_180 260
+#define LOWER_270 190
+#define UPPER_270 350
 
-int mouse = 1;  //select which mouse is running
+int mouse = 3;  //select which mouse is running
 
 Adafruit_MPU6050 mpu;
 Adafruit_MCP3008 adc1;
@@ -90,7 +90,7 @@ int leftSensors = 0;
 int rightSensors = 0;
 int emptyCheck = 0;
 
-float kP_line = 0.02;
+float kP_line = 0.07;
 int line_error = 0;
 float dist_adjust = 0.0;
 
@@ -131,6 +131,8 @@ void stopMove() {
   // Stop left motor
   ledcWrite(M_LEFT_IN_1_CHANNEL, 0);
   ledcWrite(M_LEFT_IN_2_CHANNEL, 0);
+
+  delay(100);
 }
 
 /* END Basic motor movements *************************************/
@@ -269,6 +271,8 @@ void rotateLeft(int deg, Encoder &encL, Encoder &encR) {
     }
     delay(10);
   }
+
+  delay(1000);
 }
 
 void rotateRight(int deg, Encoder &encL, Encoder &encR) {
@@ -361,6 +365,8 @@ void rotateRight(int deg, Encoder &encL, Encoder &encR) {
     }
     delay(10);
   }
+
+  delay(1000);
 }
 
 /* END Rotational Movement *************************************/
@@ -520,6 +526,8 @@ void PIDForward(float distance, Encoder &encL, Encoder &encR) {
     }
     delay(10);
   }
+
+  delay(300);
 }
 
 void PIDBackward(float distance, Encoder &encL, Encoder &encR) {
@@ -610,6 +618,8 @@ void PIDBackward(float distance, Encoder &encL, Encoder &encR) {
     }
     delay(10);
   }
+
+  delay(300);
 }
 
 
@@ -623,22 +633,22 @@ void PIDBackward(float distance, Encoder &encL, Encoder &encR) {
 void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
   switch (instruction) {
     case 'F':
-      PIDForward(3, encL, encR); //Move off node
+      PIDForward(4, encL, encR); //Move off node
       break;
     case 'L':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateLeft(88,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE - 3, encL, encR);
+      //PIDBackward(WHEEL_TO_NODE_DISTANCE - 4, encL, encR);
       break;
     case 'R':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateRight(88,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE - 3, encL, encR);
+      //PIDBackward(WHEEL_TO_NODE_DISTANCE - 4, encL, encR);
       break;
     case 'B':
       PIDForward(WHEEL_TO_NODE_DISTANCE, encL, encR);
       rotateRight(178,encL,encR);
-      PIDBackward(WHEEL_TO_NODE_DISTANCE - 3, encL, encR);
+      //PIDBackward(WHEEL_TO_NODE_DISTANCE - 4, encL, encR);
       break;
     case 'Y': 
       ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
@@ -842,21 +852,21 @@ void loop() {
 
         switch (instructions[0]) { //Handle first instruction
           case 'E':
-            instructions.remove(0);
-            PIDForward(7, encL, encR);
+            instructions.remove(0,1);
+            PIDForward(8, encL, encR);
             break;
           
           case 'Y':
           case 'N':
           case 'S':
             instructionHandler(instructions[0], encL, encR);
-            instructions.remove(0);
+            instructions.remove(0,1);
             if (instructions.length() == 0) {
               endFlag = true;
             } else {
               PIDForward(4, encL, encR);
               instructionHandler(instructions[0], encL, encR);
-              instructions.remove(0);
+              instructions.remove(0,1);
             }
             break;
           
@@ -865,12 +875,12 @@ void loop() {
           case 'B':
             PIDForward(4, encL, encR);
             instructionHandler(instructions[0], encL, encR);
-            instructions.remove(0);
+            instructions.remove(0,1);
             break;
           
           case 'F':
-            PIDForward(7, encL, encR);
-            instructions.remove(0);
+            PIDForward(8, encL, encR);
+            instructions.remove(0,1);
             break;
 
 
@@ -1001,13 +1011,23 @@ void loop() {
 
             zVel = g.gyro.z - zOffset;
             zPosition = zPosition + (zVel * timeElapsed / 1000.0);
+            float zPositionCheck = fmod(zPosition*RAD_TO_DEG,360);
+            while (zPositionCheck < 0) {
+              zPositionCheck += 360;
+            }
+            while (zPositionCheck > 360) {
+              zPositionCheck -= 360;
+            }
 
             xPosition = (currentPos_L + currentPos_R) * 0.5 / ROTATION * (2*PI*WHEEL_RADIUS/10) - dist_adjust;
 
             //Serial.print("X: "); Serial.print(xPosition); Serial.println();
 
             //If mouse hits junction with left or right path and no instructions
-            if ((leftSensors > 3 || rightSensors > 3) && instructions.length() == 0) {
+            Serial.println(leftSensors);
+            Serial.println(rightSensors);
+            
+            if ((leftSensors + rightSensors > 3) && instructions.length() == 0) {
               //Serial.println("J w/o I");
               stopMove();
               delay(10);
@@ -1018,12 +1038,12 @@ void loop() {
               break;
 
             //If mouse hits junction with left or right path and has instructions
-            } else if (leftSensors > 3 || rightSensors > 3) {
+            } else if (leftSensors + rightSensors > 3)  {
               //Serial.println("J w/ I");
               stopMove();
               char instruction = instructions[0];
               instructionHandler(instruction,encL,encR);
-              instructions.remove(0);
+              instructions.remove(0,1);
               emptyCheck = 0;
               if ((instruction == 'Y' || instruction == 'N' || instruction == 'S') && instructions.length() == 0) {
                 endFlag = true;
@@ -1044,7 +1064,6 @@ void loop() {
             //If no junctions, dead ends, or instructions, move forward
             } else if (instructions.length() == 0) {
               //Serial.println("F");
-              int zPositionCheck = (int)(zPosition*RAD_TO_DEG)%360;
 
               if (curveDistanceReset && orientation == 0 && LOWER_270 < zPositionCheck && zPositionCheck < UPPER_270) {
                 pathType = FR_PATH;
@@ -1129,6 +1148,7 @@ void loop() {
         }
 
         //Serial.print("Fin: "); Serial.print(path); Serial.println();
+        delay(1000);
         webSocket.sendTXT(num, path);
         delay(100);
         break;
