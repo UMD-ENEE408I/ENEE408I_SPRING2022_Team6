@@ -15,7 +15,6 @@
 
 #define STRAIGHT_THRESHOLD 2.0 //cm
 #define STRAIGHT_DISTANCE 15.0 //cm
-//#define CURVE_DISTANCE 15.0*2.0*PI/4.0
 #define CURVE_DISTANCE 5.0 + (10.0*2.0*PI/4.0) + 5.0 //cm
 #define NODE_READ_DISTANCE 2.5 //cm
 #define WHEEL_TO_NODE_DISTANCE 8.5 //cm
@@ -24,14 +23,14 @@
 #define FL_PATH 1
 #define FR_PATH 2
 
-#define LOWER_0 315
-#define UPPER_0 45
-#define LOWER_90 45
-#define UPPER_90 135
-#define LOWER_180 135
-#define UPPER_180 225
-#define LOWER_270 225
-#define UPPER_270 315
+#define LOWER_0 300
+#define UPPER_0 60
+#define LOWER_90 30
+#define UPPER_90 150
+#define LOWER_180 120
+#define UPPER_180 240
+#define LOWER_270 210
+#define UPPER_270 330
 
 int mouse = 3;  //select which mouse is running
 
@@ -90,7 +89,8 @@ int leftSensors = 0;
 int rightSensors = 0;
 int emptyCheck = 0;
 
-float kP_line = 0.05;
+float kP_line_node = 0.02;
+float kP_line_follow = 0.11;
 int line_error = 0;
 float dist_adjust = 0.0;
 
@@ -502,7 +502,7 @@ void PIDForward(float distance, Encoder &encL, Encoder &encR) {
     int target_line = 7; //desired average is the center
     line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
     //Serial.print("Error: "); Serial.print(line_error); Serial.println();
-    float adjust_vel = kP_line * line_error;
+    float adjust_vel = kP_line_node * line_error;
     //Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
     if(line_error == 0 || emptyCheck < 3) {  //on track, reset
       targetVel_L = 10;
@@ -681,10 +681,84 @@ void instructionHandler(char instruction, Encoder &encL, Encoder &encR){
       delay(150);
       ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave + 1);
       delay(150);
+      ledcWrite(BUZZ_CHANNEL, 0);
       delay(5000);
       break;
     case 'W':
-      //TODO: Add W sound
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_A, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_C, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_D, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_F, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_G, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_F, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_D, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_C, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_A, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_C, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_D, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_F, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_G, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_F, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_D, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_C, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_A, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_C, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_D, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_F, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_G, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_F, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_E, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_D, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_C, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_B, octave);
+      delay(100);
+      ledcWriteNote(BUZZ_CHANNEL, NOTE_A, octave);
+      delay(100);
       delay(5000);
       break;
   }
@@ -990,7 +1064,7 @@ void loop() {
             int target_line = 7; //desired average is the center
             line_error = target_line - line_pos; //positive if mouse is too far left (right sensors predominant) 
             //Serial.print("Error: "); Serial.print(line_error); Serial.println();
-            float adjust_vel = kP_line * line_error;
+            float adjust_vel = kP_line_follow * line_error;
             //Serial.print("Adjustment: "); Serial.print(adjust_vel); Serial.println();
             if(line_error == 0 || emptyCheck < 3) {  //on track, reset
               targetVel_L = 10;
