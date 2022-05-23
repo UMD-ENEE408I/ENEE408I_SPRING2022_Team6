@@ -698,7 +698,7 @@ class Maze:
 
         url = f"{url}&i={self.prev_x},{self.prev_y},{self.prev_facing},{display_instruction}"
         
-        with open(r'./Maze Display/data/data.txt', 'w') as file:
+        with open(r'../Maze Display/data/data.txt', 'w') as file:
             file.write(url)
             file.close()
 
@@ -714,7 +714,7 @@ class Maze:
         print(f"Sending {self.instruction} to {self.mouse.name}")
         self.mouse_socket.send(self.instruction)
         mouse_data = self.mouse_socket.recv()
-        mouse_data = input('Mouse data: ')
+        #mouse_data = input('Mouse data: ')
         print('Mouse Data: ', mouse_data)
         self.handleMouseData(mouse_data)
         self.serveNextInstruction()
@@ -915,7 +915,7 @@ class Maze:
                 instruction, facing, display, from_x, from_y = self.bfs(self.mouse.facing, self.mouse.x, self.mouse.y, vip['x'], vip['y'])
                 self.mouse.setLocation(vip['x'], vip['y'], facing)
                 self.sendDisplayData(f"{display}Y")
-                return self.sendInstruction(f"{instruction}Y")
+                return self.sendInstruction(f"F{instruction}Y")
             
             # If the end has been found, the mouse travels to their vip and then travels to the end
             else:
@@ -927,7 +927,7 @@ class Maze:
                 end_instruction, facing, end_display, from_x, from_y = self.bfs(facing, vip['x'], vip['y'], self.end['x'], self.end['y'])
                 self.mouse.setLocation(self.end['x'], self.end['y'], facing)
                 self.sendDisplayData(f"{vip_display}Y{end_display}S")
-                return self.sendInstruction(f"{vip_instruction}Y{end_instruction}S")
+                return self.sendInstruction(f"F{vip_instruction}Y{end_instruction}S")
 
 
 
@@ -1031,9 +1031,9 @@ class Maze:
                 self.mouse.state = 'Searching for VIP'
 
             self.mouse_socket.close()
+            input('Press Enter to continue...')
             self.mouse_socket.connect(f"ws://{self.mouse.ip}")
             print(f"Connected to {self.mouse.name}")
-            input('Press Enter to continue...')
 
         
         elif self.mouse.state == 'Traveling to end' and self.mouse.name == self.mouse2.name:
@@ -1045,10 +1045,10 @@ class Maze:
                 self.mouse.state = 'Searching for VIP'
             
             self.mouse_socket.close()
+            input('Press Enter to continue...')
             self.mouse_socket.connect(f"ws://{self.mouse.ip}")
             print(f"Connected to {self.mouse.name}")
             print()
-            input('Press Enter to continue...')
             
         elif self.mouse.state == 'Traveling to end' and self.mouse.name == self.mouse3.name:
             self.mouse.state = 'Complete'
@@ -1121,7 +1121,7 @@ def initialize_demo():
     print(f"Mouse Three VIP: {mouse_three_vip}")
     print()
 
-    mouse_one_ip_addr, mouse_two_ip_addr, mouse_three_ip_addr = '192.168.43.46', '192.168.43.54', '192.168.43.46'
+    mouse_one_ip_addr, mouse_two_ip_addr, mouse_three_ip_addr = '192.168.43.211', '192.168.43.54', '192.168.43.46'
     print(f"Mouse One IP Address: {mouse_one_ip_addr}")
     print(f"Mouse Two IP Address: {mouse_two_ip_addr}")
     print(f"Mouse Three IP Address: {mouse_three_ip_addr}")
@@ -1129,9 +1129,9 @@ def initialize_demo():
 
     camera_ip_addr = '127.0.0.1:9000'
 
-    mouse1 = Mouse('Mouse 1', mouse_one_ip_addr, 0, 0, 'n', mouse_one_vip)
-    mouse2 = Mouse('Mouse 2', mouse_two_ip_addr, 0, 0, 'n', mouse_two_vip)
-    mouse3 = Mouse('Mouse 3', mouse_three_ip_addr, 0, 0, 'n', mouse_three_vip)
+    mouse1 = Mouse('Mouse 1', mouse_three_ip_addr, 0, 0, 'n', mouse_one_vip)
+    mouse2 = Mouse('Mouse 2', mouse_one_ip_addr, 0, 0, 'n', mouse_two_vip)
+    mouse3 = Mouse('Mouse 3', mouse_two_ip_addr, 0, 0, 'n', mouse_three_vip)
 
     maze = Maze(mouse1, mouse2, mouse3, camera_ip_addr)
 
