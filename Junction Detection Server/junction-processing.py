@@ -69,13 +69,13 @@ def get_junction():
         ret, junction = video_capture.read()
         
         junction_gray = cv2.cvtColor(junction, cv2.COLOR_BGR2GRAY)
-        ret, thresh = cv2.threshold(junction_gray,180,255,cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(junction_gray,210,255,cv2.THRESH_BINARY)
         
         for match_test in match_tests:
             filename, match_type, left, right, top, bottom = match_test
             test_im = thresh[top:bottom,left:right]
         
-            template = np.array(PIL.Image.open("C://Users//hnrom//ENEE408I//ENEE408I_SPRING2022_Team6-demo_test_sockets//Junction Detection Server//templates\\" + filename + ".png"))
+            template = np.array(PIL.Image.open("C://Users//hnrom//ENEE408I//ENEE408I_SPRING2022//ENEE408I_SPRING2022_Team6-demo_test_sockets//Junction Detection Server//templates//templates\\" + filename + ".png"))
             template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         
             test_im_copy = test_im.copy()
@@ -83,9 +83,9 @@ def get_junction():
             result = cv2.matchTemplate(test_im_copy, template_gray, cv2.TM_CCORR_NORMED)
             min_val, similarity, min_loc, location = cv2.minMaxLoc(result)
         
-            if (similarity > 0.8) and match_type == "end":
+            if (similarity > 0.9) and match_type == "end":
                 is_end = True
-            elif (similarity > 0.78):
+            elif (similarity > 0.78) and match_type != "end":
                 paths[match_type] = True
             
         count = count + 1
